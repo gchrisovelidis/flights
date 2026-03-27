@@ -20,8 +20,10 @@ st.markdown(
 
     .block-container {
         padding-top: 0 !important;
-        padding-bottom: 0 !important;
+        padding-bottom: 2rem !important;
         max-width: 100% !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
     }
 
     .greeting-screen {
@@ -29,7 +31,7 @@ st.markdown(
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #F7F8FA;
+        background: #F6F7FB;
     }
 
     .greeting-text {
@@ -40,6 +42,7 @@ st.markdown(
         text-align: center;
         animation: fadeInOut 4s ease-in-out forwards;
         padding: 0 30px;
+        letter-spacing: -0.03em;
     }
 
     @keyframes fadeInOut {
@@ -54,73 +57,146 @@ st.markdown(
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding-top: 28px;
-        margin-bottom: 42px;
+        padding-top: 34px;
+        margin-bottom: 26px;
     }
 
     .hero-subtitle {
-        font-size: 15px;
+        font-size: 16px;
         font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 1px;
-        color: #6B7280;
+        color: #667085;
         text-align: center;
         margin-top: 10px;
     }
 
-    .section-title {
+    .hero-description {
+        font-size: 18px;
+        color: #667085;
+        text-align: center;
+        margin-top: 10px;
+        margin-bottom: 8px;
+        max-width: 720px;
+        line-height: 1.5;
+    }
+
+    .search-card {
+        max-width: 620px;
+        margin: 0 auto 36px auto;
+        background: #FFFFFF;
+        border: 1px solid #E6EAF2;
+        border-radius: 24px;
+        box-shadow: 0 8px 26px rgba(15, 23, 42, 0.05);
+        padding: 28px 28px 24px 28px;
+    }
+
+    .search-title {
         font-size: 34px;
         font-weight: 800;
-        color: #1F2937;
-        margin-bottom: 10px;
-        line-height: 1.1;
-    }
-
-    .section-subtitle {
-        font-size: 16px;
-        color: #6B7280;
-        margin-bottom: 18px;
-        line-height: 1.5;
-        max-width: 520px;
-    }
-
-    .result-card {
-        background: #FFFFFF;
-        border: 1px solid #E5EAF1;
-        border-radius: 20px;
-        padding: 18px;
-        box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
-        margin-bottom: 14px;
-    }
-
-    .result-city {
-        font-size: 22px;
-        font-weight: 800;
-        color: #1F2937;
+        color: #162033;
         margin-bottom: 8px;
+        text-align: center;
+        letter-spacing: -0.03em;
     }
 
-    .result-country {
+    .search-subtitle {
+        font-size: 16px;
+        color: #667085;
+        text-align: center;
+        margin-bottom: 20px;
+        line-height: 1.5;
+    }
+
+    .results-header {
+        font-size: 32px;
+        font-weight: 800;
+        color: #162033;
+        margin: 0 0 18px 0;
+        text-align: center;
+        letter-spacing: -0.03em;
+    }
+
+    .results-wrap {
+        max-width: 1280px;
+        margin: 0 auto;
+    }
+
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 18px;
+        margin-top: 12px;
+    }
+
+    .destination-card {
+        background: #FFFFFF;
+        border: 1px solid #E6EAF2;
+        border-radius: 22px;
+        padding: 20px 20px 18px 20px;
+        box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
+    }
+
+    .destination-city {
+        font-size: 24px;
+        font-weight: 800;
+        color: #162033;
+        margin-bottom: 6px;
+        line-height: 1.15;
+        letter-spacing: -0.02em;
+    }
+
+    .destination-code {
+        display: inline-block;
+        font-size: 13px;
+        font-weight: 800;
+        color: #1F5FAE;
+        background: #EEF4FF;
+        border-radius: 999px;
+        padding: 5px 10px;
+        margin-bottom: 12px;
+        letter-spacing: 0.04em;
+    }
+
+    .destination-country {
         font-size: 15px;
         font-weight: 600;
-        color: #6B7280;
-        margin-bottom: 10px;
+        color: #667085;
+        margin-bottom: 18px;
+        line-height: 1.4;
     }
 
-    .result-price {
+    .destination-fare {
         font-size: 16px;
-        font-weight: 700;
+        font-weight: 800;
         color: #1F5FAE;
+        margin-top: auto;
+    }
+
+    .destination-fare.muted {
+        color: #98A2B3;
     }
 
     div[data-testid="stSelectbox"] label {
-        font-weight: 600;
+        font-weight: 700;
+        color: #344054;
+    }
+
+    div[data-testid="stSelectbox"] > div {
+        border-radius: 14px;
+    }
+
+    div[data-testid="stButton"] {
+        display: flex;
+        justify-content: center;
+        margin-top: 6px;
     }
 
     div[data-testid="stButton"] button {
-        border-radius: 12px;
-        padding: 0.55rem 1.1rem;
-        font-weight: 600;
+        border-radius: 14px;
+        padding: 0.7rem 1.6rem;
+        font-weight: 700;
+        font-size: 15px;
     }
 
     @media (max-width: 900px) {
@@ -129,8 +205,17 @@ st.markdown(
             padding: 0 20px;
         }
 
-        .section-title {
+        .search-title,
+        .results-header {
             font-size: 28px;
+        }
+
+        .hero-description {
+            font-size: 16px;
+        }
+
+        .search-card {
+            padding: 22px 18px 18px 18px;
         }
     }
     </style>
@@ -138,16 +223,11 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# -----------------------
-# Config
-# -----------------------
 TIMEZONE = "Europe/Athens"
 GREETING_SECONDS = 4
 API_KEY = st.secrets.get("SERPAPI_KEY", "")
 
-# -----------------------
-# Greeting logic
-# -----------------------
+
 def get_greeting(now: datetime) -> str:
     hour = now.hour
     weekday = now.weekday()
@@ -196,9 +276,20 @@ def get_greeting(now: datetime) -> str:
     return "Καλημέρα!"
 
 
-# -----------------------
-# API
-# -----------------------
+def extract_dest_code(item: dict) -> str:
+    candidates = [
+        item.get("airport_code"),
+        item.get("iata_code"),
+        item.get("destination_id"),
+        item.get("airport"),
+        item.get("code"),
+    ]
+    for value in candidates:
+        if isinstance(value, str) and value.strip():
+            return value.strip().upper()
+    return ""
+
+
 @st.cache_data(ttl=86400, show_spinner=False)
 def get_destinations(origin: str) -> list[dict]:
     if not API_KEY:
@@ -218,11 +309,13 @@ def get_destinations(origin: str) -> list[dict]:
 
         results = []
         for d in data.get("destinations", []):
+            price = d.get("price")
             results.append(
                 {
                     "city": d.get("city") or d.get("title") or "Unknown destination",
+                    "airport_code": extract_dest_code(d),
                     "country": d.get("country") or "—",
-                    "price": d.get("price"),
+                    "price": price,
                 }
             )
         return results
@@ -230,9 +323,6 @@ def get_destinations(origin: str) -> list[dict]:
         return []
 
 
-# -----------------------
-# Intro state
-# -----------------------
 if "intro_shown" not in st.session_state:
     st.session_state.intro_shown = False
 
@@ -247,60 +337,73 @@ if not st.session_state.intro_shown:
         """,
         unsafe_allow_html=True,
     )
-
     time.sleep(GREETING_SECONDS)
     st.session_state.intro_shown = True
     st.rerun()
 
-# -----------------------
-# Main dashboard
-# -----------------------
 st.markdown('<div class="hero-wrap">', unsafe_allow_html=True)
-st.image("sig_logo.png", width=240)
+st.image("sig_logo.png", width=280)
 st.markdown('<div class="hero-subtitle">Flight Explorer</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="hero-description">Select a departure airport to explore available destinations.</div>',
+    unsafe_allow_html=True,
+)
 st.markdown("</div>", unsafe_allow_html=True)
 
-left, right = st.columns([1, 1.7], gap="large")
+st.markdown('<div class="search-card">', unsafe_allow_html=True)
+st.markdown('<div class="search-title">✈️ Find destinations</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="search-subtitle">Choose a starting airport and discover the destinations available from it.</div>',
+    unsafe_allow_html=True,
+)
 
-with left:
-    st.markdown('<div class="section-title">✈️ Find destinations</div>', unsafe_allow_html=True)
+origin = st.selectbox(
+    "Departure Airport",
+    ["JFK", "LAX", "EWR", "MIA", "YYZ"],
+    index=0,
+)
+
+search = st.button("Search")
+st.markdown("</div>", unsafe_allow_html=True)
+
+if search:
+    with st.spinner("Searching destinations..."):
+        results = get_destinations(origin)
+
+    st.markdown('<div class="results-wrap">', unsafe_allow_html=True)
     st.markdown(
-        '<div class="section-subtitle">Select a departure airport and search for available destinations.</div>',
+        f'<div class="results-header">Destinations from {origin}</div>',
         unsafe_allow_html=True,
     )
 
-    origin = st.selectbox(
-        "Departure Airport",
-        ["JFK", "LHR", "ATH", "CDG", "FRA", "MXP", "MAD", "BCN"],
-        index=0,
-    )
+    if results:
+        cards_html = []
+        for item in results:
+            city = item.get("city", "Unknown destination")
+            country = item.get("country", "—")
+            airport_code = item.get("airport_code", "")
+            price = item.get("price")
 
-    search = st.button("Search")
+            code_html = f'<div class="destination-code">{airport_code}</div>' if airport_code else ""
+            fare_class = "destination-fare" if price not in [None, ""] else "destination-fare muted"
+            fare_text = f"From €{price}" if price not in [None, ""] else "Fare unavailable"
 
-with right:
-    if search:
-        with st.spinner("Searching destinations..."):
-            results = get_destinations(origin)
-
-        if results:
-            st.markdown(
-                f'<div class="section-title" style="font-size:30px;">Destinations from {origin}</div>',
-                unsafe_allow_html=True,
+            cards_html.append(
+                f"""
+                <div class="destination-card">
+                    <div class="destination-city">{city}</div>
+                    {code_html}
+                    <div class="destination-country">{country}</div>
+                    <div class="{fare_class}">{fare_text}</div>
+                </div>
+                """
             )
 
-            for item in results:
-                price = item.get("price")
-                price_text = f"From €{price}" if price not in [None, ""] else "Price unavailable"
+        st.markdown(
+            f'<div class="card-grid">{"".join(cards_html)}</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.info("No destinations found.")
 
-                st.markdown(
-                    f"""
-                    <div class="result-card">
-                        <div class="result-city">{item.get("city", "Unknown destination")}</div>
-                        <div class="result-country">{item.get("country", "—")}</div>
-                        <div class="result-price">{price_text}</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-        else:
-            st.info("No destinations found.")
+    st.markdown("</div>", unsafe_allow_html=True)
