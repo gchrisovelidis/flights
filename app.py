@@ -241,18 +241,12 @@ def get_greeting(now: datetime) -> str:
 
     return "Καλημέρα!"
 
-
 def extract_dest_code(item: dict) -> str:
-    candidates = [
-        item.get("airport_code"),
-        item.get("iata_code"),
-        item.get("destination_id"),
-        item.get("airport"),
-        item.get("code"),
-    ]
-    for value in candidates:
-        if isinstance(value, str) and value.strip():
-            return value.strip().upper()
+    airport = item.get("destination_airport", {})
+    if isinstance(airport, dict):
+        code = airport.get("code")
+        if isinstance(code, str) and code.strip():
+            return code.strip().upper()
     return ""
 
 
@@ -265,6 +259,9 @@ def get_destinations(origin: str) -> list[dict]:
     params = {
         "engine": "google_travel_explore",
         "departure_id": origin,
+        "gl": "us",
+        "hl": "en",
+        "currency": "USD",
         "api_key": API_KEY,
     }
 
@@ -277,16 +274,15 @@ def get_destinations(origin: str) -> list[dict]:
         for d in data.get("destinations", []):
             results.append(
                 {
-                    "city": d.get("city") or d.get("title") or "Unknown destination",
+                    "city": d.get("name") or "Unknown destination",
                     "airport_code": extract_dest_code(d),
                     "country": d.get("country") or "—",
-                    "price": d.get("price"),
+                    "price": d.get("flight_price"),
                 }
             )
         return results
     except Exception:
         return []
-
 
 if "intro_shown" not in st.session_state:
     st.session_state.intro_shown = False
@@ -310,7 +306,10 @@ if not st.session_state.intro_shown:
 _, hero_col, _ = st.columns([1.2, 2, 1.2])
 
 with hero_col:
-    st.image("sig_logo.png", width=320)
+    left_logo, center_logo, right_logo = st.columns([1, 2, 1])
+    with center_logo:
+        st.image("sig_logo.png", width=320)
+
     st.markdown('<div class="hero-title">Flight Explorer</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="hero-subtitle">Select a departure airport to explore available destinations.</div>',
