@@ -52,38 +52,23 @@ st.markdown(
         100% { opacity: 0; transform: scale(1.02); }
     }
 
-    .hero-shell {
-        max-width: 760px;
-        margin: 0 auto;
-        text-align: center;
-        padding-top: 34px;
-    }
-
     .hero-title {
-        margin-top: 14px;
+        margin-top: 12px;
         font-size: 16px;
         font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 1px;
         color: #667085;
+        text-align: center;
     }
 
     .hero-subtitle {
         margin-top: 10px;
-        margin-bottom: 28px;
+        margin-bottom: 30px;
         font-size: 18px;
         line-height: 1.5;
         color: #667085;
-    }
-
-    .search-shell {
-        max-width: 760px;
-        margin: 0 auto;
-        background: #FFFFFF;
-        border: 1px solid #E6EAF2;
-        border-radius: 24px;
-        box-shadow: 0 8px 26px rgba(15, 23, 42, 0.05);
-        padding: 28px 28px 24px 28px;
+        text-align: center;
     }
 
     .search-heading {
@@ -101,12 +86,7 @@ st.markdown(
         line-height: 1.5;
         color: #667085;
         text-align: center;
-        margin-bottom: 22px;
-    }
-
-    .results-shell {
-        max-width: 1280px;
-        margin: 38px auto 0 auto;
+        margin-bottom: 20px;
     }
 
     .results-header {
@@ -172,20 +152,9 @@ st.markdown(
         color: #98A2B3;
     }
 
-    div[data-testid="stSelectbox"] {
-        max-width: 520px;
-        margin: 0 auto;
-    }
-
     div[data-testid="stSelectbox"] label {
         font-weight: 700;
         color: #344054;
-    }
-
-    div[data-testid="stButton"] {
-        display: flex;
-        justify-content: center;
-        margin-top: 10px;
     }
 
     div[data-testid="stButton"] button {
@@ -208,10 +177,6 @@ st.markdown(
 
         .hero-subtitle {
             font-size: 16px;
-        }
-
-        .search-shell {
-            padding: 22px 18px 18px 18px;
         }
 
         .block-container {
@@ -341,36 +306,41 @@ if not st.session_state.intro_shown:
     st.session_state.intro_shown = True
     st.rerun()
 
-st.markdown('<div class="hero-shell">', unsafe_allow_html=True)
-st.image("sig_logo.png", width=280)
-st.markdown('<div class="hero-title">Flight Explorer</div>', unsafe_allow_html=True)
-st.markdown(
-    '<div class="hero-subtitle">Select a departure airport to explore available destinations.</div>',
-    unsafe_allow_html=True,
-)
-st.markdown("</div>", unsafe_allow_html=True)
+# Centered hero
+_, hero_col, _ = st.columns([1.2, 2, 1.2])
 
-st.markdown('<div class="search-shell">', unsafe_allow_html=True)
-st.markdown('<div class="search-heading">✈️ Find destinations</div>', unsafe_allow_html=True)
-st.markdown(
-    '<div class="search-description">Choose a starting airport and discover the destinations available from it.</div>',
-    unsafe_allow_html=True,
-)
+with hero_col:
+    st.image("sig_logo.png", width=320)
+    st.markdown('<div class="hero-title">Flight Explorer</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="hero-subtitle">Select a departure airport to explore available destinations.</div>',
+        unsafe_allow_html=True,
+    )
 
-origin = st.selectbox(
-    "Departure Airport",
-    ["JFK", "LAX", "EWR", "MIA", "YYZ"],
-    index=0,
-)
+# Centered search area
+_, search_col, _ = st.columns([1.2, 2, 1.2])
 
-search = st.button("Search")
-st.markdown("</div>", unsafe_allow_html=True)
+with search_col:
+    st.markdown('<div class="search-heading">✈️ Find destinations</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="search-description">Choose a starting airport and discover the destinations available from it.</div>',
+        unsafe_allow_html=True,
+    )
+
+    origin = st.selectbox(
+        "Departure Airport",
+        ["JFK", "LAX", "EWR", "MIA", "YYZ"],
+        index=0,
+    )
+
+    btn_left, btn_mid, btn_right = st.columns([1.3, 1, 1.3])
+    with btn_mid:
+        search = st.button("Search", use_container_width=True)
 
 if search:
     with st.spinner("Searching destinations..."):
         results = get_destinations(origin)
 
-    st.markdown('<div class="results-shell">', unsafe_allow_html=True)
     st.markdown(
         f'<div class="results-header">Destinations from {origin}</div>',
         unsafe_allow_html=True,
@@ -399,11 +369,6 @@ if search:
                 """
             )
 
-        st.markdown(
-            f'<div class="card-grid">{"".join(cards_html)}</div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown(f'<div class="card-grid">{"".join(cards_html)}</div>', unsafe_allow_html=True)
     else:
         st.info("No destinations found.")
-
-    st.markdown("</div>", unsafe_allow_html=True)
