@@ -19,15 +19,15 @@ st.markdown(
     #MainMenu {visibility: hidden;}
 
     .block-container {
-        padding-top: 0 !important;
-        padding-bottom: 2rem !important;
         max-width: 100% !important;
+        padding-top: 0 !important;
+        padding-bottom: 3rem !important;
         padding-left: 2rem !important;
         padding-right: 2rem !important;
     }
 
     .greeting-screen {
-        height: 100vh;
+        min-height: 100vh;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -52,38 +52,33 @@ st.markdown(
         100% { opacity: 0; transform: scale(1.02); }
     }
 
-    .hero-wrap {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
+    .hero-shell {
+        max-width: 760px;
+        margin: 0 auto;
+        text-align: center;
         padding-top: 34px;
-        margin-bottom: 26px;
     }
 
-    .hero-subtitle {
+    .hero-title {
+        margin-top: 14px;
         font-size: 16px;
         font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 1px;
         color: #667085;
-        text-align: center;
-        margin-top: 10px;
     }
 
-    .hero-description {
+    .hero-subtitle {
+        margin-top: 10px;
+        margin-bottom: 28px;
         font-size: 18px;
-        color: #667085;
-        text-align: center;
-        margin-top: 10px;
-        margin-bottom: 8px;
-        max-width: 720px;
         line-height: 1.5;
+        color: #667085;
     }
 
-    .search-card {
-        max-width: 620px;
-        margin: 0 auto 36px auto;
+    .search-shell {
+        max-width: 760px;
+        margin: 0 auto;
         background: #FFFFFF;
         border: 1px solid #E6EAF2;
         border-radius: 24px;
@@ -91,42 +86,43 @@ st.markdown(
         padding: 28px 28px 24px 28px;
     }
 
-    .search-title {
+    .search-heading {
         font-size: 34px;
         font-weight: 800;
-        color: #162033;
-        margin-bottom: 8px;
-        text-align: center;
+        line-height: 1.1;
         letter-spacing: -0.03em;
+        color: #162033;
+        text-align: center;
+        margin-bottom: 8px;
     }
 
-    .search-subtitle {
+    .search-description {
         font-size: 16px;
+        line-height: 1.5;
         color: #667085;
         text-align: center;
-        margin-bottom: 20px;
-        line-height: 1.5;
+        margin-bottom: 22px;
+    }
+
+    .results-shell {
+        max-width: 1280px;
+        margin: 38px auto 0 auto;
     }
 
     .results-header {
         font-size: 32px;
         font-weight: 800;
-        color: #162033;
-        margin: 0 0 18px 0;
-        text-align: center;
+        line-height: 1.1;
         letter-spacing: -0.03em;
-    }
-
-    .results-wrap {
-        max-width: 1280px;
-        margin: 0 auto;
+        color: #162033;
+        text-align: center;
+        margin-bottom: 20px;
     }
 
     .card-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
         gap: 18px;
-        margin-top: 12px;
     }
 
     .destination-card {
@@ -140,10 +136,10 @@ st.markdown(
     .destination-city {
         font-size: 24px;
         font-weight: 800;
-        color: #162033;
-        margin-bottom: 6px;
         line-height: 1.15;
         letter-spacing: -0.02em;
+        color: #162033;
+        margin-bottom: 8px;
     }
 
     .destination-code {
@@ -161,20 +157,24 @@ st.markdown(
     .destination-country {
         font-size: 15px;
         font-weight: 600;
+        line-height: 1.4;
         color: #667085;
         margin-bottom: 18px;
-        line-height: 1.4;
     }
 
     .destination-fare {
         font-size: 16px;
         font-weight: 800;
         color: #1F5FAE;
-        margin-top: auto;
     }
 
     .destination-fare.muted {
         color: #98A2B3;
+    }
+
+    div[data-testid="stSelectbox"] {
+        max-width: 520px;
+        margin: 0 auto;
     }
 
     div[data-testid="stSelectbox"] label {
@@ -182,19 +182,15 @@ st.markdown(
         color: #344054;
     }
 
-    div[data-testid="stSelectbox"] > div {
-        border-radius: 14px;
-    }
-
     div[data-testid="stButton"] {
         display: flex;
         justify-content: center;
-        margin-top: 6px;
+        margin-top: 10px;
     }
 
     div[data-testid="stButton"] button {
         border-radius: 14px;
-        padding: 0.7rem 1.6rem;
+        padding: 0.72rem 1.7rem;
         font-weight: 700;
         font-size: 15px;
     }
@@ -205,17 +201,22 @@ st.markdown(
             padding: 0 20px;
         }
 
-        .search-title,
+        .search-heading,
         .results-header {
             font-size: 28px;
         }
 
-        .hero-description {
+        .hero-subtitle {
             font-size: 16px;
         }
 
-        .search-card {
+        .search-shell {
             padding: 22px 18px 18px 18px;
+        }
+
+        .block-container {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
         }
     }
     </style>
@@ -309,13 +310,12 @@ def get_destinations(origin: str) -> list[dict]:
 
         results = []
         for d in data.get("destinations", []):
-            price = d.get("price")
             results.append(
                 {
                     "city": d.get("city") or d.get("title") or "Unknown destination",
                     "airport_code": extract_dest_code(d),
                     "country": d.get("country") or "—",
-                    "price": price,
+                    "price": d.get("price"),
                 }
             )
         return results
@@ -341,19 +341,19 @@ if not st.session_state.intro_shown:
     st.session_state.intro_shown = True
     st.rerun()
 
-st.markdown('<div class="hero-wrap">', unsafe_allow_html=True)
+st.markdown('<div class="hero-shell">', unsafe_allow_html=True)
 st.image("sig_logo.png", width=280)
-st.markdown('<div class="hero-subtitle">Flight Explorer</div>', unsafe_allow_html=True)
+st.markdown('<div class="hero-title">Flight Explorer</div>', unsafe_allow_html=True)
 st.markdown(
-    '<div class="hero-description">Select a departure airport to explore available destinations.</div>',
+    '<div class="hero-subtitle">Select a departure airport to explore available destinations.</div>',
     unsafe_allow_html=True,
 )
 st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown('<div class="search-card">', unsafe_allow_html=True)
-st.markdown('<div class="search-title">✈️ Find destinations</div>', unsafe_allow_html=True)
+st.markdown('<div class="search-shell">', unsafe_allow_html=True)
+st.markdown('<div class="search-heading">✈️ Find destinations</div>', unsafe_allow_html=True)
 st.markdown(
-    '<div class="search-subtitle">Choose a starting airport and discover the destinations available from it.</div>',
+    '<div class="search-description">Choose a starting airport and discover the destinations available from it.</div>',
     unsafe_allow_html=True,
 )
 
@@ -370,7 +370,7 @@ if search:
     with st.spinner("Searching destinations..."):
         results = get_destinations(origin)
 
-    st.markdown('<div class="results-wrap">', unsafe_allow_html=True)
+    st.markdown('<div class="results-shell">', unsafe_allow_html=True)
     st.markdown(
         f'<div class="results-header">Destinations from {origin}</div>',
         unsafe_allow_html=True,
