@@ -31,75 +31,17 @@ st.markdown(
     f"""
     <style>
     body {{
-        background: {bg};
+        background-color: {bg};
         color: {text};
     }}
 
     .block-container {{
-        max-width: 100% !important;
-        padding-top: 0 !important;
-        padding-bottom: 3rem !important;
-        padding-left: 2rem !important;
-        padding-right: 2rem !important;
+        background-color: {bg};
     }}
 
-    .greeting-screen {{
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: {bg};
-    }}
-
-    .greeting-text {{
-        font-size: 112px;
-        font-weight: 800;
+    .stApp {{
+        background-color: {bg};
         color: {text};
-        text-align: center;
-        animation: fadeInOut 4s ease-in-out forwards;
-    }}
-
-    @keyframes fadeInOut {{
-        0% {{ opacity: 0; transform: scale(0.96); }}
-        20% {{ opacity: 1; }}
-        80% {{ opacity: 1; }}
-        100% {{ opacity: 0; }}
-    }}
-
-    .hero-title {{
-        font-size: 16px;
-        font-weight: 800;
-        text-transform: uppercase;
-        color: {muted};
-        text-align: center;
-        margin-top: 12px;
-    }}
-
-    .hero-subtitle {{
-        font-size: 18px;
-        color: {muted};
-        text-align: center;
-        margin-bottom: 30px;
-    }}
-
-    .search-heading {{
-        font-size: 32px;
-        font-weight: 800;
-        text-align: center;
-        margin-bottom: 10px;
-    }}
-
-    .results-header {{
-        font-size: 30px;
-        font-weight: 800;
-        text-align: center;
-        margin: 30px 0 20px;
-    }}
-
-    .card-grid {{
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 18px;
     }}
 
     .destination-card {{
@@ -112,20 +54,18 @@ st.markdown(
     .destination-city {{
         font-size: 22px;
         font-weight: 800;
-        margin-bottom: 6px;
+        color: {text};
     }}
 
     .destination-code {{
         font-size: 12px;
         font-weight: 700;
         color: {accent};
-        margin-bottom: 10px;
     }}
 
     .destination-country {{
         font-size: 14px;
         color: {muted};
-        margin-bottom: 12px;
     }}
 
     .destination-fare {{
@@ -137,6 +77,11 @@ st.markdown(
     .destination-fare.muted {{
         color: {muted};
     }}
+
+    label {{
+        color: {text} !important;
+    }}
+
     </style>
     """,
     unsafe_allow_html=True,
