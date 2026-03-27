@@ -1,11 +1,9 @@
-import base64
+import time
 from datetime import datetime
-from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import requests
 import streamlit as st
-import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="Flight Explorer",
@@ -21,14 +19,34 @@ st.markdown(
     #MainMenu {visibility: hidden;}
 
     .block-container {
-        padding: 0 !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
         max-width: 100% !important;
     }
 
-    .main-wrap {
-        min-height: 100vh;
+    .greeting-screen {
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         background: #F7F8FA;
-        padding: 24px 42px 40px 42px;
+    }
+
+    .greeting-text {
+        font-size: 112px;
+        font-weight: 800;
+        line-height: 1;
+        color: #111111;
+        text-align: center;
+        animation: fadeInOut 4s ease-in-out forwards;
+        padding: 0 30px;
+    }
+
+    @keyframes fadeInOut {
+        0%   { opacity: 0; transform: scale(0.96); }
+        20%  { opacity: 1; transform: scale(1); }
+        80%  { opacity: 1; transform: scale(1); }
+        100% { opacity: 0; transform: scale(1.02); }
     }
 
     .hero-wrap {
@@ -36,29 +54,21 @@ st.markdown(
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding-top: 18px;
-        margin-bottom: 46px;
-    }
-
-    .hero-logo img {
-        width: 240px;
-        max-width: 80%;
-        height: auto;
-        display: block;
-        margin: 0 auto;
+        padding-top: 28px;
+        margin-bottom: 42px;
     }
 
     .hero-subtitle {
-        margin-top: 14px;
         font-size: 15px;
         font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 1px;
         color: #6B7280;
         text-align: center;
+        margin-top: 10px;
     }
 
-    .search-title {
+    .section-title {
         font-size: 34px;
         font-weight: 800;
         color: #1F2937;
@@ -66,12 +76,12 @@ st.markdown(
         line-height: 1.1;
     }
 
-    .search-subtitle {
+    .section-subtitle {
         font-size: 16px;
         color: #6B7280;
         margin-bottom: 18px;
-        max-width: 560px;
         line-height: 1.5;
+        max-width: 520px;
     }
 
     .result-card {
@@ -112,6 +122,17 @@ st.markdown(
         padding: 0.55rem 1.1rem;
         font-weight: 600;
     }
+
+    @media (max-width: 900px) {
+        .greeting-text {
+            font-size: 64px;
+            padding: 0 20px;
+        }
+
+        .section-title {
+            font-size: 28px;
+        }
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -121,19 +142,12 @@ st.markdown(
 # Config
 # -----------------------
 TIMEZONE = "Europe/Athens"
-LOGO_PATH = "sig_logo.png"
-GREETING_FADE_SECONDS = 4
+GREETING_SECONDS = 4
 API_KEY = st.secrets.get("SERPAPI_KEY", "")
 
 # -----------------------
-# Helpers
+# Greeting logic
 # -----------------------
-def get_image_base64(path: str) -> str:
-    file_path = Path(path)
-    if not file_path.exists():
-        return ""
-    return base64.b64encode(file_path.read_bytes()).decode()
-
 def get_greeting(now: datetime) -> str:
     hour = now.hour
     weekday = now.weekday()
@@ -181,6 +195,10 @@ def get_greeting(now: datetime) -> str:
 
     return "Καλημέρα!"
 
+
+# -----------------------
+# API
+# -----------------------
 @st.cache_data(ttl=86400, show_spinner=False)
 def get_destinations(origin: str) -> list[dict]:
     if not API_KEY:
@@ -200,119 +218,54 @@ def get_destinations(origin: str) -> list[dict]:
 
         results = []
         for d in data.get("destinations", []):
-            results.append({
-                "city": d.get("city") or d.get("title") or "Unknown destination",
-                "country": d.get("country") or "—",
-                "price": d.get("price"),
-            })
+            results.append(
+                {
+                    "city": d.get("city") or d.get("title") or "Unknown destination",
+                    "country": d.get("country") or "—",
+                    "price": d.get("price"),
+                }
+            )
         return results
     except Exception:
         return []
 
+
 # -----------------------
-# Greeting overlay
+# Intro state
 # -----------------------
 if "intro_shown" not in st.session_state:
     st.session_state.intro_shown = False
 
 now = datetime.now(ZoneInfo(TIMEZONE))
-greeting = get_greeting(now)
-show_greeting = not st.session_state.intro_shown
-st.session_state.intro_shown = True
 
-if show_greeting:
-    components.html(
-        f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                html, body {{
-                    margin: 0;
-                    padding: 0;
-                    background: transparent;
-                }}
-
-                .greeting-overlay {{
-                    position: fixed;
-                    inset: 0;
-                    width: 100vw;
-                    height: 100vh;
-                    background: #F7F8FA;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 999999;
-                    pointer-events: none;
-                    animation: greetingFadeOut 0.5s ease forwards;
-                    animation-delay: {GREETING_FADE_SECONDS}s;
-                }}
-
-                .greeting-text {{
-                    font-family: Inter, Arial, sans-serif;
-                    font-size: 112px;
-                    font-weight: 800;
-                    line-height: 1;
-                    color: #111111;
-                    text-align: center;
-                    opacity: 0;
-                    animation: fadeInOut {GREETING_FADE_SECONDS}s ease-in-out forwards;
-                    transform-origin: center center;
-                    padding: 0 30px;
-                }}
-
-                @keyframes fadeInOut {{
-                    0%   {{ opacity: 0; transform: scale(0.96); }}
-                    20%  {{ opacity: 1; transform: scale(1); }}
-                    80%  {{ opacity: 1; transform: scale(1); }}
-                    100% {{ opacity: 0; transform: scale(1.02); }}
-                }}
-
-                @keyframes greetingFadeOut {{
-                    to {{
-                        opacity: 0;
-                        visibility: hidden;
-                    }}
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="greeting-overlay">
-                <div class="greeting-text">{greeting}</div>
-            </div>
-        </body>
-        </html>
-        """,
-        height=0,
-        scrolling=False,
-    )
-
-# -----------------------
-# Main page
-# -----------------------
-logo_b64 = get_image_base64(LOGO_PATH)
-
-st.markdown('<div class="main-wrap">', unsafe_allow_html=True)
-
-if logo_b64:
+if not st.session_state.intro_shown:
     st.markdown(
         f"""
-        <div class="hero-wrap">
-            <div class="hero-logo">
-                <img src="data:image/png;base64,{logo_b64}" alt="Logo">
-            </div>
-            <div class="hero-subtitle">Flight Explorer</div>
+        <div class="greeting-screen">
+            <div class="greeting-text">{get_greeting(now)}</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
+    time.sleep(GREETING_SECONDS)
+    st.session_state.intro_shown = True
+    st.rerun()
+
+# -----------------------
+# Main dashboard
+# -----------------------
+st.markdown('<div class="hero-wrap">', unsafe_allow_html=True)
+st.image("sig_logo.png", width=240)
+st.markdown('<div class="hero-subtitle">Flight Explorer</div>', unsafe_allow_html=True)
+st.markdown("</div>", unsafe_allow_html=True)
+
 left, right = st.columns([1, 1.7], gap="large")
 
 with left:
-    st.markdown('<div class="search-title">✈️ Find destinations</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">✈️ Find destinations</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="search-subtitle">Select a departure airport and search for available destinations.</div>',
+        '<div class="section-subtitle">Select a departure airport and search for available destinations.</div>',
         unsafe_allow_html=True,
     )
 
@@ -331,9 +284,10 @@ with right:
 
         if results:
             st.markdown(
-                f'<div class="search-title" style="font-size:30px;">Destinations from {origin}</div>',
+                f'<div class="section-title" style="font-size:30px;">Destinations from {origin}</div>',
                 unsafe_allow_html=True,
             )
+
             for item in results:
                 price = item.get("price")
                 price_text = f"From €{price}" if price not in [None, ""] else "Price unavailable"
@@ -350,5 +304,3 @@ with right:
                 )
         else:
             st.info("No destinations found.")
-
-st.markdown("</div>", unsafe_allow_html=True)
