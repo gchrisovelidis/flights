@@ -357,17 +357,19 @@ if search:
             fare_class = "destination-fare" if price not in [None, ""] else "destination-fare muted"
             fare_text = f"From €{price}" if price not in [None, ""] else "Fare unavailable"
 
-            cards_html.append(
-                f"""
-                <div class="destination-card">
-                    <div class="destination-city">{city}</div>
-                    {code_html}
-                    <div class="destination-country">{country}</div>
-                    <div class="{fare_class}">{fare_text}</div>
-                </div>
-                """
+            card_html = (
+                f'<div class="destination-card">'
+                f'<div class="destination-city">{city}</div>'
+                f'{code_html}'
+                f'<div class="destination-country">{country}</div>'
+                f'<div class="{fare_class}">{fare_text}</div>'
+                f'</div>'
             )
+            cards_html.append(card_html)
 
-        st.markdown(f'<div class="card-grid">{"".join(cards_html)}</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="card-grid">' + "".join(cards_html) + '</div>',
+            unsafe_allow_html=True,
+        )
     else:
         st.info("No destinations found.")
