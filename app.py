@@ -1,6 +1,8 @@
+import csv
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import requests
@@ -16,52 +18,123 @@ TIMEZONE = "Europe/Athens"
 GREETING_SECONDS = 4
 API_KEY = st.secrets.get("SERPAPI_KEY", "")
 SERPAPI_URL = "https://serpapi.com/search.json"
+AIRPORTS_FILE = Path("airports.dat")
 
-ORIGIN_AIRPORTS = [
-    "JFK", "LAX", "EWR", "MIA", "YYZ"
-]
+POPULAR_AIRPORTS = {
+    "United States": ["JFK", "EWR", "LAX", "MIA", "ORD", "SFO", "ATL", "BOS", "IAD", "DFW", "SEA"],
+    "Canada": ["YYZ", "YUL", "YVR", "YYC", "YOW", "YHZ"],
+}
 
-DESTINATIONS = [
+EUROPE_DESTINATIONS = [
+    # Greece
     {"airport_code": "ATH", "city": "Athens", "country": "Greece"},
     {"airport_code": "SKG", "city": "Thessaloniki", "country": "Greece"},
     {"airport_code": "HER", "city": "Heraklion", "country": "Greece"},
+    {"airport_code": "CHQ", "city": "Chania", "country": "Greece"},
+    {"airport_code": "RHO", "city": "Rhodes", "country": "Greece"},
     {"airport_code": "CFU", "city": "Corfu", "country": "Greece"},
+
+    # UK
     {"airport_code": "LHR", "city": "London", "country": "United Kingdom"},
     {"airport_code": "LGW", "city": "London", "country": "United Kingdom"},
+    {"airport_code": "STN", "city": "London", "country": "United Kingdom"},
+    {"airport_code": "LTN", "city": "London", "country": "United Kingdom"},
     {"airport_code": "MAN", "city": "Manchester", "country": "United Kingdom"},
+    {"airport_code": "EDI", "city": "Edinburgh", "country": "United Kingdom"},
+    {"airport_code": "GLA", "city": "Glasgow", "country": "United Kingdom"},
+    {"airport_code": "BHX", "city": "Birmingham", "country": "United Kingdom"},
+    {"airport_code": "BRS", "city": "Bristol", "country": "United Kingdom"},
+
+    # France
     {"airport_code": "CDG", "city": "Paris", "country": "France"},
     {"airport_code": "ORY", "city": "Paris", "country": "France"},
     {"airport_code": "NCE", "city": "Nice", "country": "France"},
+    {"airport_code": "LYS", "city": "Lyon", "country": "France"},
+    {"airport_code": "MRS", "city": "Marseille", "country": "France"},
+
+    # Germany
     {"airport_code": "FRA", "city": "Frankfurt", "country": "Germany"},
     {"airport_code": "MUC", "city": "Munich", "country": "Germany"},
     {"airport_code": "BER", "city": "Berlin", "country": "Germany"},
-    {"airport_code": "AMS", "city": "Amsterdam", "country": "Netherlands"},
-    {"airport_code": "BRU", "city": "Brussels", "country": "Belgium"},
-    {"airport_code": "ZRH", "city": "Zurich", "country": "Switzerland"},
-    {"airport_code": "VIE", "city": "Vienna", "country": "Austria"},
+    {"airport_code": "DUS", "city": "Dusseldorf", "country": "Germany"},
+    {"airport_code": "HAM", "city": "Hamburg", "country": "Germany"},
+    {"airport_code": "CGN", "city": "Cologne", "country": "Germany"},
+
+    # Italy
     {"airport_code": "FCO", "city": "Rome", "country": "Italy"},
+    {"airport_code": "CIA", "city": "Rome", "country": "Italy"},
     {"airport_code": "MXP", "city": "Milan", "country": "Italy"},
+    {"airport_code": "LIN", "city": "Milan", "country": "Italy"},
     {"airport_code": "NAP", "city": "Naples", "country": "Italy"},
+    {"airport_code": "VCE", "city": "Venice", "country": "Italy"},
+    {"airport_code": "BLQ", "city": "Bologna", "country": "Italy"},
+    {"airport_code": "CTA", "city": "Catania", "country": "Italy"},
+
+    # Spain
     {"airport_code": "MAD", "city": "Madrid", "country": "Spain"},
     {"airport_code": "BCN", "city": "Barcelona", "country": "Spain"},
     {"airport_code": "AGP", "city": "Malaga", "country": "Spain"},
     {"airport_code": "PMI", "city": "Palma", "country": "Spain"},
+    {"airport_code": "SVQ", "city": "Seville", "country": "Spain"},
+    {"airport_code": "VLC", "city": "Valencia", "country": "Spain"},
+    {"airport_code": "BIO", "city": "Bilbao", "country": "Spain"},
+    {"airport_code": "ALC", "city": "Alicante", "country": "Spain"},
+
+    # Portugal
     {"airport_code": "LIS", "city": "Lisbon", "country": "Portugal"},
     {"airport_code": "OPO", "city": "Porto", "country": "Portugal"},
+    {"airport_code": "FAO", "city": "Faro", "country": "Portugal"},
+    {"airport_code": "FNC", "city": "Funchal", "country": "Portugal"},
+
+    # Netherlands / Belgium / Switzerland / Austria
+    {"airport_code": "AMS", "city": "Amsterdam", "country": "Netherlands"},
+    {"airport_code": "EIN", "city": "Eindhoven", "country": "Netherlands"},
+    {"airport_code": "BRU", "city": "Brussels", "country": "Belgium"},
+    {"airport_code": "CRL", "city": "Brussels", "country": "Belgium"},
+    {"airport_code": "ZRH", "city": "Zurich", "country": "Switzerland"},
+    {"airport_code": "GVA", "city": "Geneva", "country": "Switzerland"},
+    {"airport_code": "BSL", "city": "Basel", "country": "Switzerland"},
+    {"airport_code": "VIE", "city": "Vienna", "country": "Austria"},
+    {"airport_code": "SZG", "city": "Salzburg", "country": "Austria"},
+
+    # Nordics
+    {"airport_code": "CPH", "city": "Copenhagen", "country": "Denmark"},
+    {"airport_code": "ARN", "city": "Stockholm", "country": "Sweden"},
+    {"airport_code": "GOT", "city": "Gothenburg", "country": "Sweden"},
+    {"airport_code": "OSL", "city": "Oslo", "country": "Norway"},
+    {"airport_code": "HEL", "city": "Helsinki", "country": "Finland"},
+    {"airport_code": "KEF", "city": "Reykjavik", "country": "Iceland"},
+
+    # Central / Eastern Europe
+    {"airport_code": "PRG", "city": "Prague", "country": "Czech Republic"},
+    {"airport_code": "BUD", "city": "Budapest", "country": "Hungary"},
+    {"airport_code": "WAW", "city": "Warsaw", "country": "Poland"},
+    {"airport_code": "KRK", "city": "Krakow", "country": "Poland"},
+    {"airport_code": "OTP", "city": "Bucharest", "country": "Romania"},
+    {"airport_code": "SOF", "city": "Sofia", "country": "Bulgaria"},
+    {"airport_code": "BEG", "city": "Belgrade", "country": "Serbia"},
+    {"airport_code": "ZAG", "city": "Zagreb", "country": "Croatia"},
+    {"airport_code": "DBV", "city": "Dubrovnik", "country": "Croatia"},
+    {"airport_code": "SPU", "city": "Split", "country": "Croatia"},
+    {"airport_code": "LJU", "city": "Ljubljana", "country": "Slovenia"},
+    {"airport_code": "TGD", "city": "Podgorica", "country": "Montenegro"},
+    {"airport_code": "TIA", "city": "Tirana", "country": "Albania"},
+    {"airport_code": "SKP", "city": "Skopje", "country": "North Macedonia"},
+    {"airport_code": "RIX", "city": "Riga", "country": "Latvia"},
+    {"airport_code": "VNO", "city": "Vilnius", "country": "Lithuania"},
+    {"airport_code": "TLL", "city": "Tallinn", "country": "Estonia"},
+
+    # Ireland / Malta / Cyprus / Luxembourg
+    {"airport_code": "DUB", "city": "Dublin", "country": "Ireland"},
+    {"airport_code": "ORK", "city": "Cork", "country": "Ireland"},
+    {"airport_code": "MLA", "city": "Malta", "country": "Malta"},
+    {"airport_code": "LCA", "city": "Larnaca", "country": "Cyprus"},
+    {"airport_code": "PFO", "city": "Paphos", "country": "Cyprus"},
+    {"airport_code": "LUX", "city": "Luxembourg", "country": "Luxembourg"},
+
+    # Istanbul
     {"airport_code": "IST", "city": "Istanbul", "country": "Turkey"},
     {"airport_code": "SAW", "city": "Istanbul", "country": "Turkey"},
-    {"airport_code": "DXB", "city": "Dubai", "country": "United Arab Emirates"},
-    {"airport_code": "DOH", "city": "Doha", "country": "Qatar"},
-    {"airport_code": "CAI", "city": "Cairo", "country": "Egypt"},
-    {"airport_code": "BKK", "city": "Bangkok", "country": "Thailand"},
-    {"airport_code": "SIN", "city": "Singapore", "country": "Singapore"},
-    {"airport_code": "HND", "city": "Tokyo", "country": "Japan"},
-    {"airport_code": "NRT", "city": "Tokyo", "country": "Japan"},
-    {"airport_code": "ICN", "city": "Seoul", "country": "South Korea"},
-    {"airport_code": "BOS", "city": "Boston", "country": "United States"},
-    {"airport_code": "ORD", "city": "Chicago", "country": "United States"},
-    {"airport_code": "SFO", "city": "San Francisco", "country": "United States"},
-    {"airport_code": "YUL", "city": "Montreal", "country": "Canada"},
 ]
 
 
@@ -368,6 +441,63 @@ def get_greeting(now: datetime) -> str:
     return "Καλημέρα!"
 
 
+@st.cache_data(ttl=86400, show_spinner=False)
+def load_departure_airports() -> list[dict]:
+    if not AIRPORTS_FILE.exists():
+        return []
+
+    airports = []
+
+    with AIRPORTS_FILE.open("r", encoding="utf-8", newline="") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            if len(row) < 8:
+                continue
+
+            name = row[1].strip()
+            city = row[2].strip()
+            country = row[3].strip()
+            iata = row[4].strip()
+
+            if country not in {"United States", "Canada"}:
+                continue
+
+            if not iata or iata == r"\N" or len(iata) != 3:
+                continue
+
+            airports.append(
+                {
+                    "code": iata.upper(),
+                    "city": city,
+                    "country": country,
+                    "name": name,
+                    "label": f"{iata.upper()} ({city})",
+                }
+            )
+
+    # remove duplicates by code
+    unique = {}
+    for airport in airports:
+        unique[airport["code"]] = airport
+
+    cleaned = list(unique.values())
+    cleaned.sort(key=lambda x: (x["country"], x["city"], x["code"]))
+    return cleaned
+
+
+def get_airport_options_for_country(all_airports: list[dict], selected_country: str) -> list[dict]:
+    filtered = [a for a in all_airports if a["country"] == selected_country]
+    popular_codes = POPULAR_AIRPORTS.get(selected_country, [])
+
+    popular = [a for a in filtered if a["code"] in popular_codes]
+    popular.sort(key=lambda x: popular_codes.index(x["code"]))
+
+    others = [a for a in filtered if a["code"] not in popular_codes]
+    others.sort(key=lambda x: (x["city"], x["code"]))
+
+    return popular + others
+
+
 def parse_flight_result(data: dict, fallback: dict) -> dict | None:
     itineraries = []
     itineraries.extend(data.get("best_flights", []))
@@ -444,7 +574,7 @@ def get_destinations(origin: str, outbound_date: str) -> list[dict]:
     with ThreadPoolExecutor(max_workers=8) as executor:
         futures = [
             executor.submit(search_destination, origin, destination, outbound_date)
-            for destination in DESTINATIONS
+            for destination in EUROPE_DESTINATIONS
         ]
 
         for future in as_completed(futures):
@@ -452,8 +582,17 @@ def get_destinations(origin: str, outbound_date: str) -> list[dict]:
             if result:
                 results.append(result)
 
-    results.sort(key=lambda x: x["price"])
-    return results
+    # group by city, keep cheapest airport/itinerary
+    grouped = {}
+    for item in results:
+        city_key = item["city"].strip().lower()
+        existing = grouped.get(city_key)
+        if existing is None or item["price"] < existing["price"]:
+            grouped[city_key] = item
+
+    final_results = list(grouped.values())
+    final_results.sort(key=lambda x: x["price"])
+    return final_results
 
 
 def format_duration(minutes: int | None) -> str:
@@ -488,6 +627,8 @@ if not st.session_state.intro_shown:
     st.session_state.intro_shown = True
     st.rerun()
 
+all_departure_airports = load_departure_airports()
+
 _, hero_col, _ = st.columns([1.2, 2, 1.2])
 
 with hero_col:
@@ -497,7 +638,7 @@ with hero_col:
 
     st.markdown('<div class="hero-title">Flight Explorer</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="hero-subtitle">Select a departure airport and explore direct or connecting destinations.</div>',
+        '<div class="hero-subtitle">Choose a departure airport in the USA or Canada and explore Europe + Istanbul.</div>',
         unsafe_allow_html=True,
     )
 
@@ -506,39 +647,59 @@ _, search_col, _ = st.columns([1.1, 2.2, 1.1])
 with search_col:
     st.markdown('<div class="search-heading">✈️ Find destinations</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="search-description">Choose a starting airport and a departure date to discover available destinations worldwide.</div>',
+        '<div class="search-description">Select a departure country, airport, and date to discover available destinations in Europe and Istanbul.</div>',
         unsafe_allow_html=True,
     )
 
     col1, col2 = st.columns(2)
 
     with col1:
-        origin = st.selectbox(
-            "Departure Airport",
-            ORIGIN_AIRPORTS,
+        departure_country = st.selectbox(
+            "Departure Country",
+            ["United States", "Canada"],
             index=0,
         )
 
-    with col2:
-        default_date = (now + timedelta(days=30)).date()
-        outbound_date = st.date_input(
-            "Departure Date",
-            value=default_date,
-            min_value=(now + timedelta(days=1)).date(),
-        )
+    country_airports = get_airport_options_for_country(all_departure_airports, departure_country)
+
+    if country_airports:
+        labels = [a["label"] for a in country_airports]
+        code_by_label = {a["label"]: a["code"] for a in country_airports}
+
+        with col2:
+            selected_label = st.selectbox(
+                "Departure Airport",
+                labels,
+                index=0,
+            )
+
+        origin = code_by_label[selected_label]
+    else:
+        origin = None
+        with col2:
+            st.selectbox("Departure Airport", ["No airports found"], disabled=True)
+
+    default_date = (now + timedelta(days=30)).date()
+    outbound_date = st.date_input(
+        "Departure Date",
+        value=default_date,
+        min_value=(now + timedelta(days=1)).date(),
+    )
 
     st.markdown(
-        '<div class="controls-note">Results are sorted by cheapest fare found and may include connections.</div>',
+        '<div class="controls-note">Popular airports appear first. Results are grouped by city and may include connections.</div>',
         unsafe_allow_html=True,
     )
 
     btn_left, btn_mid, btn_right = st.columns([1.3, 1, 1.3])
     with btn_mid:
-        search = st.button("Search", use_container_width=True)
+        search = st.button("Search", use_container_width=True, disabled=origin is None)
 
 if search:
     if not API_KEY:
         st.error("Missing SERPAPI_KEY in Streamlit secrets.")
+    elif origin is None:
+        st.error("No valid departure airport found.")
     else:
         with st.spinner("Searching destinations..."):
             results = get_destinations(origin, outbound_date.isoformat())
@@ -562,7 +723,7 @@ if search:
 
                 code_html = f'<div class="destination-code">{airport_code}</div>' if airport_code else ""
                 fare_class = "destination-fare" if price not in [None, ""] else "destination-fare muted"
-                fare_text = f"From €{price}" if price not in [None, ''] else "Fare unavailable"
+                fare_text = f"From €{price}" if price not in [None, ""] else "Fare unavailable"
                 stop_text = "Direct" if stops == 0 else f"{stops} stop" if stops == 1 else f"{stops} stops"
 
                 card_html = (
