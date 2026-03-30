@@ -1,5 +1,6 @@
 import time
-from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import requests
@@ -101,7 +102,7 @@ st.markdown(
 
     .card-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
         gap: 18px;
     }
 
@@ -139,10 +140,18 @@ st.markdown(
         font-weight: 600;
         line-height: 1.4;
         color: #667085;
-        margin-bottom: 18px;
+        margin-bottom: 10px;
+    }
+
+    .destination-meta {
+        font-size: 14px;
+        line-height: 1.5;
+        color: #475467;
+        margin-bottom: 6px;
     }
 
     .destination-fare {
+        margin-top: 10px;
         font-size: 16px;
         font-weight: 800;
         color: #1F5FAE;
@@ -152,7 +161,15 @@ st.markdown(
         color: #98A2B3;
     }
 
-    div[data-testid="stSelectbox"] label {
+    .controls-note {
+        font-size: 13px;
+        color: #667085;
+        text-align: center;
+        margin-top: 10px;
+    }
+
+    div[data-testid="stSelectbox"] label,
+    div[data-testid="stDateInput"] label {
         font-weight: 700;
         color: #344054;
     }
@@ -192,7 +209,56 @@ st.markdown(
 TIMEZONE = "Europe/Athens"
 GREETING_SECONDS = 4
 API_KEY = st.secrets.get("SERPAPI_KEY", "")
+SERPAPI_URL = "https://serpapi.com/search.json"
 
+ORIGIN_AIRPORTS = [
+    "JFK", "LAX", "EWR", "MIA", "YYZ"
+]
+
+# Curated global list to keep the app fast and useful.
+# You can expand this later.
+DESTINATIONS = [
+    {"airport_code": "ATH", "city": "Athens", "country": "Greece"},
+    {"airport_code": "SKG", "city": "Thessaloniki", "country": "Greece"},
+    {"airport_code": "HER", "city": "Heraklion", "country": "Greece"},
+    {"airport_code": "CFU", "city": "Corfu", "country": "Greece"},
+    {"airport_code": "LHR", "city": "London", "country": "United Kingdom"},
+    {"airport_code": "LGW", "city": "London", "country": "United Kingdom"},
+    {"airport_code": "MAN", "city": "Manchester", "country": "United Kingdom"},
+    {"airport_code": "CDG", "city": "Paris", "country": "France"},
+    {"airport_code": "ORY", "city": "Paris", "country": "France"},
+    {"airport_code": "NCE", "city": "Nice", "country": "France"},
+    {"airport_code": "FRA", "city": "Frankfurt", "country": "Germany"},
+    {"airport_code": "MUC", "city": "Munich", "country": "Germany"},
+    {"airport_code": "BER", "city": "Berlin", "country": "Germany"},
+    {"airport_code": "AMS", "city": "Amsterdam", "country": "Netherlands"},
+    {"airport_code": "BRU", "city": "Brussels", "country": "Belgium"},
+    {"airport_code": "ZRH", "city": "Zurich", "country": "Switzerland"},
+    {"airport_code": "VIE", "city": "Vienna", "country": "Austria"},
+    {"airport_code": "FCO", "city": "Rome", "country": "Italy"},
+    {"airport_code": "MXP", "city": "Milan", "country": "Italy"},
+    {"airport_code": "NAP", "city": "Naples", "country": "Italy"},
+    {"airport_code": "MAD", "city": "Madrid", "country": "Spain"},
+    {"airport_code": "BCN", "city": "Barcelona", "country": "Spain"},
+    {"airport_code": "AGP", "city": "Malaga", "country": "Spain"},
+    {"airport_code": "PMI", "city": "Palma", "country": "Spain"},
+    {"airport_code": "LIS", "city": "Lisbon", "country": "Portugal"},
+    {"airport_code": "OPO", "city": "Porto", "country": "Portugal"},
+    {"airport_code": "IST", "city": "Istanbul", "country": "Turkey"},
+    {"airport_code": "SAW", "city": "Istanbul", "country": "Turkey"},
+    {"airport_code": "DXB", "city": "Dubai", "country": "United Arab Emirates"},
+    {"airport_code": "DOH", "city": "Doha", "country": "Qatar"},
+    {"airport_code": "CAI", "city": "Cairo", "country": "Egypt"},
+    {"airport_code": "BKK", "city": "Bangkok", "country": "Thailand"},
+    {"airport_code": "SIN", "city": "Singapore", "country": "Singapore"},
+    {"airport_code": "HND", "city": "Tokyo", "country": "Japan"},
+    {"airport_code": "NRT", "city": "Tokyo", "country": "Japan"},
+    {"airport_code": "ICN", "city": "Seoul", "country": "South Korea"},
+    {"airport_code": "BOS", "city": "Boston", "country": "United States"},
+    {"airport_code": "ORD", "city": "Chicago", "country": "United States"},
+    {"airport_code": "SFO", "city": "San Francisco", "country": "United States"},
+    {"airport_code": "YUL", "city": "Montreal", "country": "Canada"},
+]
 
 def get_greeting(now: datetime) -> str:
     hour = now.hour
@@ -241,48 +307,102 @@ def get_greeting(now: datetime) -> str:
 
     return "Καλημέρα!"
 
-def extract_dest_code(item: dict) -> str:
-    airport = item.get("destination_airport", {})
-    if isinstance(airport, dict):
-        code = airport.get("code")
-        if isinstance(code, str) and code.strip():
-            return code.strip().upper()
-    return ""
+
+def parse_flight_result(data: dict, fallback: dict) -> dict | None:
+    itineraries = []
+    itineraries.extend(data.get("best_flights", []))
+    itineraries.extend(data.get("other_flights", []))
+
+    valid = []
+    for itinerary in itineraries:
+        price = itinerary.get("price")
+        if price in [None, ""]:
+            continue
+
+        layovers = itinerary.get("layovers", []) or []
+        flights = itinerary.get("flights", []) or []
+
+        airline_names = []
+        for flight in flights:
+            airline = flight.get("airline")
+            if airline and airline not in airline_names:
+                airline_names.append(airline)
+
+        valid.append(
+            {
+                "city": fallback["city"],
+                "country": fallback["country"],
+                "airport_code": fallback["airport_code"],
+                "price": price,
+                "stops": len(layovers),
+                "airlines": ", ".join(airline_names[:2]) if airline_names else "—",
+                "duration_mins": itinerary.get("total_duration"),
+            }
+        )
+
+    if not valid:
+        return None
+
+    valid.sort(key=lambda x: x["price"])
+    return valid[0]
 
 
-@st.cache_data(ttl=86400, show_spinner=False)
-def get_destinations(origin: str) -> list[dict]:
+@st.cache_data(ttl=21600, show_spinner=False)
+def search_destination(origin: str, destination: dict, outbound_date: str) -> dict | None:
     if not API_KEY:
-        return []
+        return None
 
-    url = "https://serpapi.com/search.json"
+    if origin == destination["airport_code"]:
+        return None
+
     params = {
-        "engine": "google_travel_explore",
+        "engine": "google_flights",
         "departure_id": origin,
-        "gl": "us",
+        "arrival_id": destination["airport_code"],
+        "outbound_date": outbound_date,
+        "type": 2,          # one-way
+        "stops": 0,         # any number of stops
+        "sort_by": 2,       # price
         "hl": "en",
-        "currency": "USD",
+        "gl": "gr",
+        "currency": "EUR",
         "api_key": API_KEY,
     }
 
     try:
-        response = requests.get(url, params=params, timeout=20)
+        response = requests.get(SERPAPI_URL, params=params, timeout=30)
         response.raise_for_status()
         data = response.json()
-
-        results = []
-        for d in data.get("destinations", []):
-            results.append(
-                {
-                    "city": d.get("name") or "Unknown destination",
-                    "airport_code": extract_dest_code(d),
-                    "country": d.get("country") or "—",
-                    "price": d.get("flight_price"),
-                }
-            )
-        return results
+        return parse_flight_result(data, destination)
     except Exception:
-        return []
+        return None
+
+
+def get_destinations(origin: str, outbound_date: str) -> list[dict]:
+    results = []
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = [
+            executor.submit(search_destination, origin, destination, outbound_date)
+            for destination in DESTINATIONS
+        ]
+
+        for future in as_completed(futures):
+            result = future.result()
+            if result:
+                results.append(result)
+
+    results.sort(key=lambda x: x["price"])
+    return results
+
+
+def format_duration(minutes: int | None) -> str:
+    if not minutes:
+        return "—"
+    hours = minutes // 60
+    mins = minutes % 60
+    return f"{hours}h {mins}m"
+
 
 if "intro_shown" not in st.session_state:
     st.session_state.intro_shown = False
@@ -302,7 +422,6 @@ if not st.session_state.intro_shown:
     st.session_state.intro_shown = True
     st.rerun()
 
-# Centered hero
 _, hero_col, _ = st.columns([1.2, 2, 1.2])
 
 with hero_col:
@@ -312,24 +431,39 @@ with hero_col:
 
     st.markdown('<div class="hero-title">Flight Explorer</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="hero-subtitle">Select a departure airport to explore available destinations.</div>',
+        '<div class="hero-subtitle">Select a departure airport and explore direct or connecting destinations.</div>',
         unsafe_allow_html=True,
     )
 
-# Centered search area
-_, search_col, _ = st.columns([1.2, 2, 1.2])
+_, search_col, _ = st.columns([1.1, 2.2, 1.1])
 
 with search_col:
     st.markdown('<div class="search-heading">✈️ Find destinations</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="search-description">Choose a starting airport and discover the destinations available from it.</div>',
+        '<div class="search-description">Choose a starting airport and a departure date to discover available destinations worldwide.</div>',
         unsafe_allow_html=True,
     )
 
-    origin = st.selectbox(
-        "Departure Airport",
-        ["JFK", "LAX", "EWR", "MIA", "YYZ"],
-        index=0,
+    col1, col2 = st.columns(2)
+
+    with col1:
+        origin = st.selectbox(
+            "Departure Airport",
+            ORIGIN_AIRPORTS,
+            index=0,
+        )
+
+    with col2:
+        default_date = (now + timedelta(days=30)).date()
+        outbound_date = st.date_input(
+            "Departure Date",
+            value=default_date,
+            min_value=(now + timedelta(days=1)).date(),
+        )
+
+    st.markdown(
+        '<div class="controls-note">Results are sorted by cheapest fare found and may include connections.</div>',
+        unsafe_allow_html=True,
     )
 
     btn_left, btn_mid, btn_right = st.columns([1.3, 1, 1.3])
@@ -337,39 +471,50 @@ with search_col:
         search = st.button("Search", use_container_width=True)
 
 if search:
-    with st.spinner("Searching destinations..."):
-        results = get_destinations(origin)
-
-    st.markdown(
-        f'<div class="results-header">Destinations from {origin}</div>',
-        unsafe_allow_html=True,
-    )
-
-    if results:
-        cards_html = []
-        for item in results:
-            city = item.get("city", "Unknown destination")
-            country = item.get("country", "—")
-            airport_code = item.get("airport_code", "")
-            price = item.get("price")
-
-            code_html = f'<div class="destination-code">{airport_code}</div>' if airport_code else ""
-            fare_class = "destination-fare" if price not in [None, ""] else "destination-fare muted"
-            fare_text = f"From €{price}" if price not in [None, ""] else "Fare unavailable"
-
-            card_html = (
-                f'<div class="destination-card">'
-                f'<div class="destination-city">{city}</div>'
-                f'{code_html}'
-                f'<div class="destination-country">{country}</div>'
-                f'<div class="{fare_class}">{fare_text}</div>'
-                f'</div>'
-            )
-            cards_html.append(card_html)
+    if not API_KEY:
+        st.error("Missing SERPAPI_KEY in Streamlit secrets.")
+    else:
+        with st.spinner("Searching destinations..."):
+            results = get_destinations(origin, outbound_date.isoformat())
 
         st.markdown(
-            '<div class="card-grid">' + "".join(cards_html) + '</div>',
+            f'<div class="results-header">Destinations from {origin}</div>',
             unsafe_allow_html=True,
         )
-    else:
-        st.info("No destinations found.")
+
+        if results:
+            cards_html = []
+
+            for item in results:
+                city = item.get("city", "Unknown destination")
+                country = item.get("country", "—")
+                airport_code = item.get("airport_code", "")
+                price = item.get("price")
+                stops = item.get("stops", 0)
+                airlines = item.get("airlines", "—")
+                duration_mins = item.get("duration_mins")
+
+                code_html = f'<div class="destination-code">{airport_code}</div>' if airport_code else ""
+                fare_class = "destination-fare" if price not in [None, ""] else "destination-fare muted"
+                fare_text = f"From €{price}" if price not in [None, ""] else "Fare unavailable"
+                stop_text = "Direct" if stops == 0 else f"{stops} stop" if stops == 1 else f"{stops} stops"
+
+                card_html = (
+                    f'<div class="destination-card">'
+                    f'<div class="destination-city">{city}</div>'
+                    f'{code_html}'
+                    f'<div class="destination-country">{country}</div>'
+                    f'<div class="destination-meta"><strong>Routing:</strong> {stop_text}</div>'
+                    f'<div class="destination-meta"><strong>Airline:</strong> {airlines}</div>'
+                    f'<div class="destination-meta"><strong>Duration:</strong> {format_duration(duration_mins)}</div>'
+                    f'<div class="{fare_class}">{fare_text}</div>'
+                    f'</div>'
+                )
+                cards_html.append(card_html)
+
+            st.markdown(
+                '<div class="card-grid">' + "".join(cards_html) + '</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.info("No destinations found for the selected airport and date.")
