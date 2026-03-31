@@ -438,7 +438,7 @@ def get_theme_css(dark_mode: bool) -> str:
     .book-btn:link,
     .book-btn:visited,
     .book-btn:hover,
-    .book-btn:active {
+    .book-btn:active {{
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -454,16 +454,16 @@ def get_theme_css(dark_mode: bool) -> str:
         min-height: 42px;
         border: 1px solid {book_btn_bg};
         box-sizing: border-box;
-    }
+    }}
 
-    .book-btn:hover {
+    .book-btn:hover {{
         filter: brightness(1.08);
-    }
+    }}
 
-    .book-btn:focus {
+    .book-btn:focus {{
         outline: none;
         box-shadow: 0 0 0 3px rgba(31, 95, 174, 0.18);
-    }
+    }}
 
     .controls-note {{
         font-size: 13px;
