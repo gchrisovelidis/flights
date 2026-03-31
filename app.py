@@ -434,20 +434,36 @@ def get_theme_css(dark_mode: bool) -> str:
         flex-wrap: wrap;
     }}
 
-    .book-btn {{
-        display: inline-block;
-        text-decoration: none;
+    .book-btn,
+    .book-btn:link,
+    .book-btn:visited,
+    .book-btn:hover,
+    .book-btn:active {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        text-decoration: none !important;
         background: {book_btn_bg};
-        color: {book_btn_text};
-        padding: 10px 14px;
+        color: {book_btn_text} !important;
+        padding: 10px 16px;
         border-radius: 12px;
         font-size: 13px;
         font-weight: 800;
-    }}
+        line-height: 1;
+        min-height: 42px;
+        border: 1px solid {book_btn_bg};
+        box-sizing: border-box;
+    }
 
-    .book-btn:hover {{
-        opacity: 0.95;
-    }}
+    .book-btn:hover {
+        filter: brightness(1.08);
+    }
+
+    .book-btn:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(31, 95, 174, 0.18);
+    }
 
     .controls-note {{
         font-size: 13px;
