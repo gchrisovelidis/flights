@@ -192,7 +192,7 @@ def get_theme_css(dark_mode: bool) -> str:
         input_border = "#334155"
         section_line = "#233047"
         section_header_bg = "#0F172A"
-        book_btn_bg = "#1E40AF"
+        book_btn_bg = "#3B82F6"
         book_btn_text = "#FFFFFF"
         badge_bg = "#1F2937"
         badge_text = "#CBD5E1"
