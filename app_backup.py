@@ -2,9 +2,12 @@ import csv
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
+from io import BytesIO
 from pathlib import Path
+from urllib.parse import quote_plus
 from zoneinfo import ZoneInfo
 
+import pandas as pd
 import requests
 import streamlit as st
 
@@ -25,6 +28,7 @@ POPULAR_AIRPORTS = {
     "Canada": ["YYZ", "YUL", "YVR", "YYC", "YOW", "YHZ"],
 }
 
+# Main Europe + Istanbul list
 EUROPE_DESTINATIONS = [
     # Greece
     {"airport_code": "ATH", "city": "Athens", "country": "Greece"},
@@ -34,7 +38,7 @@ EUROPE_DESTINATIONS = [
     {"airport_code": "RHO", "city": "Rhodes", "country": "Greece"},
     {"airport_code": "CFU", "city": "Corfu", "country": "Greece"},
 
-    # UK
+    # United Kingdom
     {"airport_code": "LHR", "city": "London", "country": "United Kingdom"},
     {"airport_code": "LGW", "city": "London", "country": "United Kingdom"},
     {"airport_code": "STN", "city": "London", "country": "United Kingdom"},
@@ -137,6 +141,36 @@ EUROPE_DESTINATIONS = [
     {"airport_code": "SAW", "city": "Istanbul", "country": "Turkey"},
 ]
 
+# Smaller subset for faster searches
+MAJOR_DEST_CODES = {
+    "ATH", "SKG",
+    "LHR", "LGW", "MAN",
+    "CDG", "ORY", "NCE",
+    "FRA", "MUC", "BER",
+    "FCO", "MXP", "NAP", "VCE",
+    "MAD", "BCN", "AGP", "PMI",
+    "LIS", "OPO",
+    "AMS", "BRU", "ZRH", "GVA", "VIE",
+    "CPH", "ARN", "OSL", "HEL",
+    "PRG", "BUD", "WAW", "OTP",
+    "DUB", "LCA", "MLA",
+    "IST", "SAW",
+}
+
+SORT_OPTIONS = [
+    "Cheapest first",
+    "Shortest first",
+    "Fewest stops",
+    "City A–Z",
+]
+
+STOP_OPTIONS = {
+    "Any": 0,
+    "Direct only": 1,
+    "Up to 1 stop": 2,
+    "Up to 2 stops": 3,
+}
+
 
 def get_theme_css(dark_mode: bool) -> str:
     if dark_mode:
@@ -156,6 +190,14 @@ def get_theme_css(dark_mode: bool) -> str:
         input_bg = "#111827"
         input_text = "#F8FAFC"
         input_border = "#334155"
+        section_line = "#233047"
+        section_header_bg = "#0F172A"
+        book_btn_bg = "#3B82F6"
+        book_btn_text = "#FFFFFF"
+        badge_bg = "#1F2937"
+        badge_text = "#CBD5E1"
+        success_bg = "#0F3D2E"
+        success_text = "#86EFAC"
     else:
         bg = "#F6F7FB"
         greeting_bg = "#F6F7FB"
@@ -173,6 +215,14 @@ def get_theme_css(dark_mode: bool) -> str:
         input_bg = "#FFFFFF"
         input_text = "#162033"
         input_border = "#D0D5DD"
+        section_line = "#DCE3EE"
+        section_header_bg = "#EDF2FA"
+        book_btn_bg = "#1F5FAE"
+        book_btn_text = "#FFFFFF"
+        badge_bg = "#F2F4F7"
+        badge_text = "#475467"
+        success_bg = "#ECFDF3"
+        success_text = "#027A48"
 
     return f"""
     <style>
@@ -266,12 +316,31 @@ def get_theme_css(dark_mode: bool) -> str:
         letter-spacing: -0.03em;
         color: {title};
         text-align: center;
-        margin-bottom: 20px;
+        margin-bottom: 14px;
+    }}
+
+    .sub-header {{
+        font-size: 14px;
+        color: {subtitle};
+        text-align: center;
+        margin-bottom: 22px;
+    }}
+
+    .country-section {{
+        margin-top: 26px;
+        margin-bottom: 10px;
+        padding: 12px 16px;
+        border: 1px solid {section_line};
+        border-radius: 14px;
+        background: {section_header_bg};
+        color: {title};
+        font-size: 20px;
+        font-weight: 800;
     }}
 
     .card-grid {{
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         gap: 18px;
     }}
 
@@ -281,6 +350,17 @@ def get_theme_css(dark_mode: bool) -> str:
         border-radius: 22px;
         padding: 20px 20px 18px 20px;
         box-shadow: {shadow};
+        display: flex;
+        flex-direction: column;
+        min-height: 260px;
+    }}
+
+    .destination-top {{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
     }}
 
     .destination-city {{
@@ -289,7 +369,7 @@ def get_theme_css(dark_mode: bool) -> str:
         line-height: 1.15;
         letter-spacing: -0.02em;
         color: {title};
-        margin-bottom: 8px;
+        margin: 0;
     }}
 
     .destination-code {{
@@ -300,8 +380,8 @@ def get_theme_css(dark_mode: bool) -> str:
         background: {pill_bg};
         border-radius: 999px;
         padding: 5px 10px;
-        margin-bottom: 12px;
         letter-spacing: 0.04em;
+        white-space: nowrap;
     }}
 
     .destination-country {{
@@ -312,6 +392,22 @@ def get_theme_css(dark_mode: bool) -> str:
         margin-bottom: 10px;
     }}
 
+    .badge-row {{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+    }}
+
+    .meta-badge {{
+        background: {badge_bg};
+        color: {badge_text};
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
+    }}
+
     .destination-meta {{
         font-size: 14px;
         line-height: 1.5;
@@ -320,8 +416,9 @@ def get_theme_css(dark_mode: bool) -> str:
     }}
 
     .destination-fare {{
-        margin-top: 10px;
-        font-size: 16px;
+        margin-top: auto;
+        padding-top: 14px;
+        font-size: 18px;
         font-weight: 800;
         color: {fare};
     }}
@@ -330,32 +427,86 @@ def get_theme_css(dark_mode: bool) -> str:
         color: {muted};
     }}
 
+    .card-actions {{
+        margin-top: 14px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }}
+
+    .book-btn,
+    .book-btn:link,
+    .book-btn:visited,
+    .book-btn:hover,
+    .book-btn:active {{
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        text-decoration: none !important;
+        background: {book_btn_bg};
+        color: {book_btn_text} !important;
+        padding: 10px 16px;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 800;
+        line-height: 1;
+        min-height: 42px;
+        border: 1px solid {book_btn_bg};
+        box-sizing: border-box;
+    }}
+
+    .book-btn:hover {{
+        filter: brightness(1.08);
+    }}
+
+    .book-btn:focus {{
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(31, 95, 174, 0.18);
+    }}
+
     .controls-note {{
         font-size: 13px;
         color: {subtitle};
         text-align: center;
-        margin-top: 10px;
+        margin-top: 8px;
+    }}
+
+    .summary-bar {{
+        margin-top: 16px;
+        margin-bottom: 12px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: {success_bg};
+        color: {success_text};
+        font-size: 14px;
+        font-weight: 700;
     }}
 
     div[data-testid="stSelectbox"] label,
     div[data-testid="stDateInput"] label,
-    div[data-testid="stToggle"] label {{
+    div[data-testid="stToggle"] label,
+    div[data-testid="stMultiSelect"] label,
+    div[data-testid="stNumberInput"] label {{
         font-weight: 700;
         color: {title} !important;
     }}
 
-    div[data-baseweb="select"] > div {{
+    div[data-baseweb="select"] > div,
+    div[data-baseweb="tag"] {{
         background-color: {input_bg} !important;
         color: {input_text} !important;
         border-color: {input_border} !important;
     }}
 
-    div[data-testid="stDateInput"] input {{
+    div[data-testid="stDateInput"] input,
+    div[data-testid="stNumberInput"] input {{
         background-color: {input_bg} !important;
         color: {input_text} !important;
     }}
 
-    div[data-testid="stButton"] button {{
+    div[data-testid="stButton"] button,
+    div[data-testid="stDownloadButton"] button {{
         border-radius: 14px;
         padding: 0.72rem 1.7rem;
         font-weight: 700;
@@ -365,7 +516,8 @@ def get_theme_css(dark_mode: bool) -> str:
         border: none;
     }}
 
-    div[data-testid="stButton"] button:hover {{
+    div[data-testid="stButton"] button:hover,
+    div[data-testid="stDownloadButton"] button:hover {{
         filter: brightness(1.05);
     }}
 
@@ -447,7 +599,6 @@ def load_departure_airports() -> list[dict]:
         return []
 
     airports = []
-
     with AIRPORTS_FILE.open("r", encoding="utf-8", newline="") as f:
         reader = csv.reader(f)
         for row in reader:
@@ -475,7 +626,6 @@ def load_departure_airports() -> list[dict]:
                 }
             )
 
-    # remove duplicates by code
     unique = {}
     for airport in airports:
         unique[airport["code"]] = airport
@@ -498,25 +648,97 @@ def get_airport_options_for_country(all_airports: list[dict], selected_country: 
     return popular + others
 
 
-def parse_flight_result(data: dict, fallback: dict) -> dict | None:
+def get_destination_pool(scope: str, allowed_countries: list[str]) -> list[dict]:
+    destinations = [d for d in EUROPE_DESTINATIONS if d["country"] in allowed_countries]
+
+    if scope == "Major airports only":
+        destinations = [d for d in destinations if d["airport_code"] in MAJOR_DEST_CODES]
+
+    return destinations
+
+
+def safe_float(value):
+    if value in (None, "", "—"):
+        return None
+    try:
+        return float(value)
+    except Exception:
+        try:
+            return float(str(value).replace(",", ""))
+        except Exception:
+            return None
+
+
+def format_price(value) -> str:
+    amount = safe_float(value)
+    if amount is None:
+        return "Fare unavailable"
+    if amount.is_integer():
+        return f"From €{int(amount)}"
+    return f"From €{amount:,.0f}"
+
+
+def format_duration(minutes) -> str:
+    mins = safe_float(minutes)
+    if mins is None:
+        return "—"
+    mins = int(mins)
+    hours = mins // 60
+    remainder = mins % 60
+    return f"{hours}h {remainder}m"
+
+
+def extract_layover_text(layovers) -> str:
+    if not layovers:
+        return "Direct"
+
+    parts = []
+    for layover in layovers:
+        if not isinstance(layover, dict):
+            continue
+        name = layover.get("name") or layover.get("airport_name") or layover.get("id") or layover.get("code")
+        duration = layover.get("duration")
+        duration_text = ""
+        if duration not in (None, ""):
+            duration_text = f" ({format_duration(duration)})"
+        if name:
+            parts.append(f"{name}{duration_text}")
+
+    return ", ".join(parts) if parts else "Connection"
+
+
+def build_search_url(origin: str, destination_code: str, outbound_date: str) -> str:
+    query = quote_plus(f"Google Flights {origin} to {destination_code} {outbound_date}")
+    return f"https://www.google.com/search?q={query}"
+
+
+def parse_flight_result(data: dict, fallback: dict, origin: str, outbound_date: str) -> dict | None:
     itineraries = []
     itineraries.extend(data.get("best_flights", []))
     itineraries.extend(data.get("other_flights", []))
 
     valid = []
     for itinerary in itineraries:
-        price = itinerary.get("price")
-        if price in [None, ""]:
+        price = safe_float(itinerary.get("price"))
+        if price is None:
             continue
 
         layovers = itinerary.get("layovers", []) or []
         flights = itinerary.get("flights", []) or []
 
         airline_names = []
-        for flight in flights:
+        departure_time = None
+        arrival_time = None
+
+        for idx, flight in enumerate(flights):
             airline = flight.get("airline")
             if airline and airline not in airline_names:
                 airline_names.append(airline)
+
+            if idx == 0:
+                departure_time = flight.get("departure_airport", {}).get("time") or flight.get("departure_time")
+            if idx == len(flights) - 1:
+                arrival_time = flight.get("arrival_airport", {}).get("time") or flight.get("arrival_time")
 
         valid.append(
             {
@@ -527,18 +749,22 @@ def parse_flight_result(data: dict, fallback: dict) -> dict | None:
                 "stops": len(layovers),
                 "airlines": ", ".join(airline_names[:2]) if airline_names else "—",
                 "duration_mins": itinerary.get("total_duration"),
+                "layover_text": extract_layover_text(layovers),
+                "departure_time": departure_time or "—",
+                "arrival_time": arrival_time or "—",
+                "booking_url": build_search_url(origin, fallback["airport_code"], outbound_date),
             }
         )
 
     if not valid:
         return None
 
-    valid.sort(key=lambda x: x["price"])
+    valid.sort(key=lambda x: (x["price"], x["stops"], safe_float(x["duration_mins"]) or 999999))
     return valid[0]
 
 
 @st.cache_data(ttl=21600, show_spinner=False)
-def search_destination(origin: str, destination: dict, outbound_date: str) -> dict | None:
+def search_destination(origin: str, destination: dict, outbound_date: str, stops_param: int) -> dict | None:
     if not API_KEY:
         return None
 
@@ -551,7 +777,7 @@ def search_destination(origin: str, destination: dict, outbound_date: str) -> di
         "arrival_id": destination["airport_code"],
         "outbound_date": outbound_date,
         "type": 2,
-        "stops": 0,
+        "stops": stops_param,
         "sort_by": 2,
         "hl": "en",
         "gl": "gr",
@@ -563,18 +789,42 @@ def search_destination(origin: str, destination: dict, outbound_date: str) -> di
         response = requests.get(SERPAPI_URL, params=params, timeout=30)
         response.raise_for_status()
         data = response.json()
-        return parse_flight_result(data, destination)
+        return parse_flight_result(data, destination, origin, outbound_date)
     except Exception:
         return None
 
 
-def get_destinations(origin: str, outbound_date: str) -> list[dict]:
+def sort_results(results: list[dict], sort_by: str) -> list[dict]:
+    if sort_by == "Shortest first":
+        return sorted(results, key=lambda x: (safe_float(x["duration_mins"]) or 999999, x["price"], x["city"]))
+    if sort_by == "Fewest stops":
+        return sorted(results, key=lambda x: (x["stops"], x["price"], safe_float(x["duration_mins"]) or 999999))
+    if sort_by == "City A–Z":
+        return sorted(results, key=lambda x: (x["country"], x["city"], x["price"]))
+    return sorted(results, key=lambda x: (x["price"], x["stops"], safe_float(x["duration_mins"]) or 999999))
+
+
+def filter_results(results: list[dict], max_price):
+    if max_price is None:
+        return results
+    return [r for r in results if r["price"] <= max_price]
+
+
+def get_destinations(
+    origin: str,
+    outbound_date: str,
+    destination_pool: list[dict],
+    stops_param: int,
+    max_price,
+    sort_by: str,
+    max_workers: int,
+) -> list[dict]:
     results = []
 
-    with ThreadPoolExecutor(max_workers=8) as executor:
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [
-            executor.submit(search_destination, origin, destination, outbound_date)
-            for destination in EUROPE_DESTINATIONS
+            executor.submit(search_destination, origin, destination, outbound_date, stops_param)
+            for destination in destination_pool
         ]
 
         for future in as_completed(futures):
@@ -582,25 +832,109 @@ def get_destinations(origin: str, outbound_date: str) -> list[dict]:
             if result:
                 results.append(result)
 
-    # group by city, keep cheapest airport/itinerary
+    results = filter_results(results, max_price)
+
+    # Group by country + city and keep cheapest airport/itinerary
     grouped = {}
     for item in results:
-        city_key = item["city"].strip().lower()
-        existing = grouped.get(city_key)
+        group_key = (item["country"].strip().lower(), item["city"].strip().lower())
+        existing = grouped.get(group_key)
         if existing is None or item["price"] < existing["price"]:
-            grouped[city_key] = item
+            grouped[group_key] = item
 
     final_results = list(grouped.values())
-    final_results.sort(key=lambda x: x["price"])
+    final_results = sort_results(final_results, sort_by)
     return final_results
 
 
-def format_duration(minutes: int | None) -> str:
-    if not minutes:
-        return "—"
-    hours = minutes // 60
-    mins = minutes % 60
-    return f"{hours}h {mins}m"
+def group_by_country(results: list[dict]) -> dict[str, list[dict]]:
+    grouped = {}
+    for item in results:
+        grouped.setdefault(item["country"], []).append(item)
+
+    for country in grouped:
+        grouped[country] = sort_results(grouped[country], st.session_state.get("sort_by_value", "Cheapest first"))
+
+    ordered_countries = sorted(
+        grouped.keys(),
+        key=lambda c: min(x["price"] for x in grouped[c]) if grouped[c] else 999999
+    )
+    return {country: grouped[country] for country in ordered_countries}
+
+
+def results_to_excel(results: list[dict], origin: str, outbound_date: str) -> bytes:
+    rows = []
+    for item in results:
+        rows.append(
+            {
+                "Origin": origin,
+                "Departure Date": outbound_date,
+                "Destination Country": item["country"],
+                "Destination City": item["city"],
+                "Airport": item["airport_code"],
+                "Price EUR": item["price"],
+                "Stops": item["stops"],
+                "Airlines": item["airlines"],
+                "Duration": format_duration(item["duration_mins"]),
+                "Departure Time": item["departure_time"],
+                "Arrival Time": item["arrival_time"],
+                "Layovers": item["layover_text"],
+                "Search URL": item["booking_url"],
+            }
+        )
+
+    df = pd.DataFrame(rows)
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Flights")
+    output.seek(0)
+    return output.getvalue()
+
+
+def render_cards(results: list[dict]) -> None:
+    grouped = group_by_country(results)
+
+    for country, items in grouped.items():
+        st.markdown(f'<div class="country-section">{country}</div>', unsafe_allow_html=True)
+
+        cards_html = []
+        for item in items:
+            city = item.get("city", "Unknown destination")
+            airport_code = item.get("airport_code", "")
+            price = item.get("price")
+            stops = item.get("stops", 0)
+            airlines = item.get("airlines", "—")
+            duration_mins = item.get("duration_mins")
+            layover_text = item.get("layover_text", "—")
+            departure_time = item.get("departure_time", "—")
+            arrival_time = item.get("arrival_time", "—")
+            booking_url = item.get("booking_url", "#")
+
+            stop_text = "Direct" if stops == 0 else f"{stops} stop" if stops == 1 else f"{stops} stops"
+            code_html = f'<div class="destination-code">{airport_code}</div>' if airport_code else ""
+
+            card_html = (
+                f'<div class="destination-card">'
+                f'  <div class="destination-top">'
+                f'    <div class="destination-city">{city}</div>'
+                f'    {code_html}'
+                f'  </div>'
+                f'  <div class="badge-row">'
+                f'    <div class="meta-badge">{stop_text}</div>'
+                f'    <div class="meta-badge">{format_duration(duration_mins)}</div>'
+                f'  </div>'
+                f'  <div class="destination-meta"><strong>Airline:</strong> {airlines}</div>'
+                f'  <div class="destination-meta"><strong>Times:</strong> {departure_time} → {arrival_time}</div>'
+                f'  <div class="destination-meta"><strong>Layover:</strong> {layover_text}</div>'
+                f'  <div class="destination-fare">{format_price(price)}</div>'
+                f'  <div class="card-actions">'
+                f'    <a class="book-btn" href="{booking_url}" target="_blank">Search fares</a>'
+                f'  </div>'
+                f'</div>'
+            )
+            cards_html.append(card_html)
+
+        st.markdown('<div class="card-grid">' + "".join(cards_html) + '</div>', unsafe_allow_html=True)
 
 
 if "intro_shown" not in st.session_state:
@@ -610,7 +944,7 @@ now = datetime.now(ZoneInfo(TIMEZONE))
 
 top_left, top_right = st.columns([6, 1.2])
 with top_right:
-    dark_mode = st.toggle("Dark mode", value=False)
+    dark_mode = st.toggle("Dark mode", value=False, key="dark_mode_toggle")
 
 st.markdown(get_theme_css(dark_mode), unsafe_allow_html=True)
 
@@ -630,7 +964,6 @@ if not st.session_state.intro_shown:
 all_departure_airports = load_departure_airports()
 
 _, hero_col, _ = st.columns([1.2, 2, 1.2])
-
 with hero_col:
     left_logo, center_logo, right_logo = st.columns([1, 2, 1])
     with center_logo:
@@ -638,22 +971,21 @@ with hero_col:
 
     st.markdown('<div class="hero-title">Flight Explorer</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="hero-subtitle">Choose a departure airport in the USA or Canada and explore Europe + Istanbul.</div>',
+        '<div class="hero-subtitle">Choose a departure airport in the USA or Canada and explore Europe + Istanbul with filters, export, and quick handoff links.</div>',
         unsafe_allow_html=True,
     )
 
-_, search_col, _ = st.columns([1.1, 2.2, 1.1])
+_, search_col, _ = st.columns([0.9, 2.4, 0.9])
 
 with search_col:
     st.markdown('<div class="search-heading">✈️ Find destinations</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="search-description">Select a departure country, airport, and date to discover available destinations in Europe and Istanbul.</div>',
+        '<div class="search-description">Select a departure country, airport, and date. Then refine by stops, price, countries, and sorting.</div>',
         unsafe_allow_html=True,
     )
 
-    col1, col2 = st.columns(2)
-
-    with col1:
+    row1_col1, row1_col2, row1_col3 = st.columns(3)
+    with row1_col1:
         departure_country = st.selectbox(
             "Departure Country",
             ["United States", "Canada"],
@@ -665,33 +997,75 @@ with search_col:
     if country_airports:
         labels = [a["label"] for a in country_airports]
         code_by_label = {a["label"]: a["code"] for a in country_airports}
-
-        with col2:
+        with row1_col2:
             selected_label = st.selectbox(
                 "Departure Airport",
                 labels,
                 index=0,
             )
-
         origin = code_by_label[selected_label]
     else:
         origin = None
-        with col2:
+        with row1_col2:
             st.selectbox("Departure Airport", ["No airports found"], disabled=True)
 
-    default_date = (now + timedelta(days=30)).date()
-    outbound_date = st.date_input(
-        "Departure Date",
-        value=default_date,
-        min_value=(now + timedelta(days=1)).date(),
-    )
+    with row1_col3:
+        default_date = (now + timedelta(days=30)).date()
+        outbound_date = st.date_input(
+            "Departure Date",
+            value=default_date,
+            min_value=(now + timedelta(days=1)).date(),
+        )
+
+    with st.expander("Advanced filters", expanded=True):
+        f1, f2, f3 = st.columns(3)
+        with f1:
+            search_scope = st.selectbox(
+                "Search Scope",
+                ["Major airports only", "Full Europe"],
+                index=0,
+                help="Major airports is faster and lighter on API usage.",
+            )
+        with f2:
+            stop_label = st.selectbox(
+                "Stops",
+                list(STOP_OPTIONS.keys()),
+                index=0,
+            )
+            stops_param = STOP_OPTIONS[stop_label]
+        with f3:
+            sort_by = st.selectbox(
+                "Sort Results",
+                SORT_OPTIONS,
+                index=0,
+                key="sort_by_value",
+            )
+
+        all_destination_countries = sorted({d["country"] for d in EUROPE_DESTINATIONS})
+        selected_destination_countries = st.multiselect(
+            "Destination Countries",
+            all_destination_countries,
+            default=all_destination_countries,
+        )
+
+        f4, f5 = st.columns(2)
+        with f4:
+            max_price_enabled = st.toggle("Set max price", value=False)
+        with f5:
+            max_price = st.number_input(
+                "Max Price (€)",
+                min_value=50,
+                step=50,
+                value=500,
+                disabled=not max_price_enabled,
+            )
 
     st.markdown(
-        '<div class="controls-note">Popular airports appear first. Results are grouped by city and may include connections.</div>',
+        '<div class="controls-note">Popular departure airports appear first. Results are grouped by destination country and city, and may include connecting flights depending on the stops filter.</div>',
         unsafe_allow_html=True,
     )
 
-    btn_left, btn_mid, btn_right = st.columns([1.3, 1, 1.3])
+    btn_left, btn_mid, btn_right = st.columns([1.2, 1, 1.2])
     with btn_mid:
         search = st.button("Search", use_container_width=True, disabled=origin is None)
 
@@ -700,48 +1074,56 @@ if search:
         st.error("Missing SERPAPI_KEY in Streamlit secrets.")
     elif origin is None:
         st.error("No valid departure airport found.")
+    elif not selected_destination_countries:
+        st.error("Please select at least one destination country.")
     else:
-        with st.spinner("Searching destinations..."):
-            results = get_destinations(origin, outbound_date.isoformat())
+        destination_pool = get_destination_pool(search_scope, selected_destination_countries)
 
-        st.markdown(
-            f'<div class="results-header">Destinations from {origin}</div>',
-            unsafe_allow_html=True,
-        )
+        if not destination_pool:
+            st.warning("No destination airports match the current filters.")
+        else:
+            # Performance: smaller pool -> more workers; larger pool -> moderate workers.
+            max_workers = 10 if search_scope == "Major airports only" else 8
+            price_limit = max_price if max_price_enabled else None
 
-        if results:
-            cards_html = []
-
-            for item in results:
-                city = item.get("city", "Unknown destination")
-                country = item.get("country", "—")
-                airport_code = item.get("airport_code", "")
-                price = item.get("price")
-                stops = item.get("stops", 0)
-                airlines = item.get("airlines", "—")
-                duration_mins = item.get("duration_mins")
-
-                code_html = f'<div class="destination-code">{airport_code}</div>' if airport_code else ""
-                fare_class = "destination-fare" if price not in [None, ""] else "destination-fare muted"
-                fare_text = f"From €{price}" if price not in [None, ""] else "Fare unavailable"
-                stop_text = "Direct" if stops == 0 else f"{stops} stop" if stops == 1 else f"{stops} stops"
-
-                card_html = (
-                    f'<div class="destination-card">'
-                    f'<div class="destination-city">{city}</div>'
-                    f'{code_html}'
-                    f'<div class="destination-country">{country}</div>'
-                    f'<div class="destination-meta"><strong>Routing:</strong> {stop_text}</div>'
-                    f'<div class="destination-meta"><strong>Airline:</strong> {airlines}</div>'
-                    f'<div class="destination-meta"><strong>Duration:</strong> {format_duration(duration_mins)}</div>'
-                    f'<div class="{fare_class}">{fare_text}</div>'
-                    f'</div>'
+            with st.spinner("Searching destinations..."):
+                results = get_destinations(
+                    origin=origin,
+                    outbound_date=outbound_date.isoformat(),
+                    destination_pool=destination_pool,
+                    stops_param=stops_param,
+                    max_price=price_limit,
+                    sort_by=sort_by,
+                    max_workers=max_workers,
                 )
-                cards_html.append(card_html)
 
             st.markdown(
-                '<div class="card-grid">' + "".join(cards_html) + '</div>',
+                f'<div class="results-header">Destinations from {origin}</div>',
                 unsafe_allow_html=True,
             )
-        else:
-            st.info("No destinations found for the selected airport and date.")
+            st.markdown(
+                f'<div class="sub-header">{outbound_date.isoformat()} • {search_scope} • {stop_label}</div>',
+                unsafe_allow_html=True,
+            )
+
+            if results:
+                cheapest = min(r["price"] for r in results)
+                st.markdown(
+                    f'<div class="summary-bar">{len(results)} cities found • Cheapest option {format_price(cheapest)}</div>',
+                    unsafe_allow_html=True,
+                )
+
+                export_bytes = results_to_excel(results, origin, outbound_date.isoformat())
+                dl_left, dl_mid, dl_right = st.columns([1.4, 1, 1.4])
+                with dl_mid:
+                    st.download_button(
+                        "Download to Excel",
+                        data=export_bytes,
+                        file_name=f"flight_explorer_{origin}_{outbound_date.isoformat()}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True,
+                    )
+
+                render_cards(results)
+            else:
+                st.info("No destinations found for the selected airport, date, and filters.")
