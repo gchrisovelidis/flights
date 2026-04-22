@@ -325,14 +325,16 @@ def get_theme_css() -> str:
         font-weight: 400;
     }
 
-    /* ── Search panel ── */
+    /* ── Search panel card — applied via CSS to the middle column ── */
+    /* Target the second column in the 3-col layout that holds the search form */
+    section[data-testid="stMain"] .block-container > div > div:nth-child(3) [data-testid="stVerticalBlock"],
     .search-panel {
-        background: var(--white);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-lg);
-        padding: 28px;
-        box-shadow: var(--shadow-md);
-        margin-bottom: 8px;
+        background: var(--white) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: var(--radius-lg) !important;
+        padding: 28px !important;
+        box-shadow: var(--shadow-md) !important;
+        margin-bottom: 8px !important;
     }
 
     .search-panel-label {
@@ -394,16 +396,28 @@ def get_theme_css() -> str:
         min-height: 44px !important;
     }
 
-    /* Multi-select tags */
-    div[data-baseweb="tag"] {
+    /* Multi-select tags — override Streamlit's default red */
+    div[data-testid="stMultiSelect"] span[data-baseweb="tag"],
+    div[data-baseweb="tag"],
+    [data-baseweb="tag"] {
         background-color: var(--accent-soft) !important;
+        border-color: var(--accent-soft) !important;
         border-radius: var(--radius-pill) !important;
     }
 
-    div[data-baseweb="tag"] span {
+    div[data-testid="stMultiSelect"] span[data-baseweb="tag"] span,
+    div[data-baseweb="tag"] span,
+    [data-baseweb="tag"] span {
         color: var(--accent) !important;
         font-weight: 600 !important;
         font-size: 12px !important;
+    }
+
+    /* Tag close (×) button */
+    div[data-baseweb="tag"] [role="button"],
+    div[data-baseweb="tag"] button {
+        color: var(--accent) !important;
+        opacity: 0.7;
     }
 
     /* Expander */
@@ -1239,8 +1253,6 @@ with hero_col:
 _, search_col, _ = st.columns([0.15, 2, 0.15])
 
 with search_col:
-    st.markdown('<div class="search-panel">', unsafe_allow_html=True)
-
     row1_col1, row1_col2, row1_col3 = st.columns(3)
     with row1_col1:
         departure_country = st.selectbox(
@@ -1326,7 +1338,6 @@ with search_col:
     with btn_mid:
         search = st.button("Search flights", use_container_width=True, disabled=origin is None)
 
-    st.markdown('</div>', unsafe_allow_html=True)
 
 # ── Results ──────────────────────────────────────────────────────────────────
 if search:
