@@ -325,16 +325,15 @@ def get_theme_css() -> str:
         font-weight: 400;
     }
 
-    /* ── Search panel card — applied via CSS to the middle column ── */
-    /* Target the second column in the 3-col layout that holds the search form */
-    section[data-testid="stMain"] .block-container > div > div:nth-child(3) [data-testid="stVerticalBlock"],
+    /* ── Search panel card ── */
     .search-panel {
-        background: var(--white) !important;
-        border: 1px solid var(--border) !important;
-        border-radius: var(--radius-lg) !important;
-        padding: 28px !important;
-        box-shadow: var(--shadow-md) !important;
-        margin-bottom: 8px !important;
+        background: var(--white);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 28px 32px 24px;
+        box-shadow: var(--shadow-md);
+        max-width: 860px;
+        margin: 0 auto 8px auto;
     }
 
     .search-panel-label {
@@ -1237,106 +1236,104 @@ if not st.session_state.intro_shown:
 all_departure_airports = load_departure_airports()
 
 # ── Hero ─────────────────────────────────────────────────────────────────────
-_, hero_col, _ = st.columns([1, 2, 1])
-with hero_col:
-    st.markdown('<div class="hero-eyebrow">North America → Europe</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<h1 class="hero-title">Explore <em>Europe</em><br>from anywhere</h1>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        '<p class="hero-subtitle">Choose a departure airport in the USA or Canada and explore Europe + Istanbul with filters, export, and quick handoff links.</p>',
-        unsafe_allow_html=True,
-    )
+st.markdown(
+    '''
+    <div class="hero-eyebrow">North America → Europe</div>
+    <h1 class="hero-title">Explore <em>Europe</em><br>from anywhere</h1>
+    <p class="hero-subtitle">Choose a departure airport in the USA or Canada and explore Europe +
+    Istanbul with filters, export, and quick handoff links.</p>
+    <div class="search-panel">
+    ''',
+    unsafe_allow_html=True,
+)
 
 # ── Search panel ─────────────────────────────────────────────────────────────
-_, search_col, _ = st.columns([0.15, 2, 0.15])
-
-with search_col:
-    row1_col1, row1_col2, row1_col3 = st.columns(3)
-    with row1_col1:
-        departure_country = st.selectbox(
-            "Country",
-            ["United States", "Canada"],
-            index=0,
-        )
-
-    country_airports = get_airport_options_for_country(all_departure_airports, departure_country)
-
-    if country_airports:
-        labels = [a["label"] for a in country_airports]
-        code_by_label = {a["label"]: a["code"] for a in country_airports}
-        with row1_col2:
-            selected_label = st.selectbox(
-                "Departure Airport",
-                labels,
-                index=0,
-            )
-        origin = code_by_label[selected_label]
-    else:
-        origin = None
-        with row1_col2:
-            st.selectbox("Departure Airport", ["No airports found"], disabled=True)
-
-    with row1_col3:
-        default_date = (now + timedelta(days=30)).date()
-        outbound_date = st.date_input(
-            "Departure Date",
-            value=default_date,
-            min_value=(now + timedelta(days=1)).date(),
-        )
-
-    with st.expander("Advanced filters", expanded=False):
-        f1, f2, f3 = st.columns(3)
-        with f1:
-            search_scope = st.selectbox(
-                "Search Scope",
-                ["Major airports only", "Full Europe"],
-                index=0,
-                help="Major airports is faster and lighter on API usage.",
-            )
-        with f2:
-            stop_label = st.selectbox(
-                "Stops",
-                list(STOP_OPTIONS.keys()),
-                index=0,
-            )
-            stops_param = STOP_OPTIONS[stop_label]
-        with f3:
-            sort_by = st.selectbox(
-                "Sort Results",
-                SORT_OPTIONS,
-                index=0,
-                key="sort_by_value",
-            )
-
-        all_destination_countries = sorted({d["country"] for d in EUROPE_DESTINATIONS})
-        selected_destination_countries = st.multiselect(
-            "Destination Countries",
-            all_destination_countries,
-            default=all_destination_countries,
-        )
-
-        f4, f5 = st.columns(2)
-        with f4:
-            max_price_enabled = st.toggle("Set max price", value=False)
-        with f5:
-            max_price = st.number_input(
-                "Max Price (€)",
-                min_value=50,
-                step=50,
-                value=500,
-                disabled=not max_price_enabled,
-            )
-
-    st.markdown(
-        '<p class="controls-note">Popular departure airports appear first. Results are grouped by destination country and city, and may include connecting flights depending on the stops filter.</p>',
-        unsafe_allow_html=True,
+row1_col1, row1_col2, row1_col3 = st.columns(3)
+with row1_col1:
+    departure_country = st.selectbox(
+        "Country",
+        ["United States", "Canada"],
+        index=0,
     )
 
-    btn_left, btn_mid, btn_right = st.columns([1.5, 1, 1.5])
-    with btn_mid:
-        search = st.button("Search flights", use_container_width=True, disabled=origin is None)
+country_airports = get_airport_options_for_country(all_departure_airports, departure_country)
+
+if country_airports:
+    labels = [a["label"] for a in country_airports]
+    code_by_label = {a["label"]: a["code"] for a in country_airports}
+    with row1_col2:
+        selected_label = st.selectbox(
+            "Departure Airport",
+            labels,
+            index=0,
+        )
+    origin = code_by_label[selected_label]
+else:
+    origin = None
+    with row1_col2:
+        st.selectbox("Departure Airport", ["No airports found"], disabled=True)
+
+with row1_col3:
+    default_date = (now + timedelta(days=30)).date()
+    outbound_date = st.date_input(
+        "Departure Date",
+        value=default_date,
+        min_value=(now + timedelta(days=1)).date(),
+    )
+
+with st.expander("Advanced filters", expanded=False):
+    f1, f2, f3 = st.columns(3)
+    with f1:
+        search_scope = st.selectbox(
+            "Search Scope",
+            ["Major airports only", "Full Europe"],
+            index=0,
+            help="Major airports is faster and lighter on API usage.",
+        )
+    with f2:
+        stop_label = st.selectbox(
+            "Stops",
+            list(STOP_OPTIONS.keys()),
+            index=0,
+        )
+        stops_param = STOP_OPTIONS[stop_label]
+    with f3:
+        sort_by = st.selectbox(
+            "Sort Results",
+            SORT_OPTIONS,
+            index=0,
+            key="sort_by_value",
+        )
+
+    all_destination_countries = sorted({d["country"] for d in EUROPE_DESTINATIONS})
+    selected_destination_countries = st.multiselect(
+        "Destination Countries",
+        all_destination_countries,
+        default=all_destination_countries,
+    )
+
+    f4, f5 = st.columns(2)
+    with f4:
+        max_price_enabled = st.toggle("Set max price", value=False)
+    with f5:
+        max_price = st.number_input(
+            "Max Price (€)",
+            min_value=50,
+            step=50,
+            value=500,
+            disabled=not max_price_enabled,
+        )
+
+st.markdown(
+    '<p class="controls-note">Popular departure airports appear first. Results are grouped by destination country and city, and may include connecting flights depending on the stops filter.</p>',
+    unsafe_allow_html=True,
+)
+
+btn_left, btn_mid, btn_right = st.columns([1.5, 1, 1.5])
+with btn_mid:
+    search = st.button("Search flights", use_container_width=True, disabled=origin is None)
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 
 # ── Results ──────────────────────────────────────────────────────────────────
