@@ -965,10 +965,6 @@ all_departure_airports = load_departure_airports()
 
 _, hero_col, _ = st.columns([1.2, 2, 1.2])
 with hero_col:
-    left_logo, center_logo, right_logo = st.columns([1, 2, 1])
-    with center_logo:
-        st.image("sig_logo.png", width=320)
-
     st.markdown('<div class="hero-title">Flight Explorer</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="hero-subtitle">Choose a departure airport in the USA or Canada and explore Europe + Istanbul with filters, export, and quick handoff links.</div>',
