@@ -171,376 +171,591 @@ STOP_OPTIONS = {
     "Up to 2 stops": 3,
 }
 
+COUNTRY_FLAGS = {
+    "Greece": "🇬🇷",
+    "United Kingdom": "🇬🇧",
+    "France": "🇫🇷",
+    "Germany": "🇩🇪",
+    "Italy": "🇮🇹",
+    "Spain": "🇪🇸",
+    "Portugal": "🇵🇹",
+    "Netherlands": "🇳🇱",
+    "Belgium": "🇧🇪",
+    "Switzerland": "🇨🇭",
+    "Austria": "🇦🇹",
+    "Denmark": "🇩🇰",
+    "Sweden": "🇸🇪",
+    "Norway": "🇳🇴",
+    "Finland": "🇫🇮",
+    "Iceland": "🇮🇸",
+    "Czech Republic": "🇨🇿",
+    "Hungary": "🇭🇺",
+    "Poland": "🇵🇱",
+    "Romania": "🇷🇴",
+    "Bulgaria": "🇧🇬",
+    "Serbia": "🇷🇸",
+    "Croatia": "🇭🇷",
+    "Slovenia": "🇸🇮",
+    "Montenegro": "🇲🇪",
+    "Albania": "🇦🇱",
+    "North Macedonia": "🇲🇰",
+    "Latvia": "🇱🇻",
+    "Lithuania": "🇱🇹",
+    "Estonia": "🇪🇪",
+    "Ireland": "🇮🇪",
+    "Malta": "🇲🇹",
+    "Cyprus": "🇨🇾",
+    "Luxembourg": "🇱🇺",
+    "Turkey": "🇹🇷",
+}
 
-def get_theme_css(dark_mode: bool) -> str:
-    if dark_mode:
-        bg = "#0B1220"
-        greeting_bg = "#0B1220"
-        card_bg = "#111827"
-        card_border = "#1F2937"
-        shadow = "0 10px 24px rgba(0, 0, 0, 0.28)"
-        title = "#F8FAFC"
-        subtitle = "#94A3B8"
-        muted = "#94A3B8"
-        pill_bg = "#172554"
-        pill_text = "#93C5FD"
-        fare = "#60A5FA"
-        button_bg = "#1D4ED8"
-        button_text = "#FFFFFF"
-        input_bg = "#111827"
-        input_text = "#F8FAFC"
-        input_border = "#334155"
-        section_line = "#233047"
-        section_header_bg = "#0F172A"
-        book_btn_bg = "#3B82F6"
-        book_btn_text = "#FFFFFF"
-        badge_bg = "#1F2937"
-        badge_text = "#CBD5E1"
-        success_bg = "#0F3D2E"
-        success_text = "#86EFAC"
-    else:
-        bg = "#F6F7FB"
-        greeting_bg = "#F6F7FB"
-        card_bg = "#FFFFFF"
-        card_border = "#E6EAF2"
-        shadow = "0 6px 20px rgba(15, 23, 42, 0.04)"
-        title = "#162033"
-        subtitle = "#667085"
-        muted = "#667085"
-        pill_bg = "#EEF4FF"
-        pill_text = "#1F5FAE"
-        fare = "#1F5FAE"
-        button_bg = "#1D4ED8"
-        button_text = "#FFFFFF"
-        input_bg = "#FFFFFF"
-        input_text = "#162033"
-        input_border = "#D0D5DD"
-        section_line = "#DCE3EE"
-        section_header_bg = "#EDF2FA"
-        book_btn_bg = "#1F5FAE"
-        book_btn_text = "#FFFFFF"
-        badge_bg = "#F2F4F7"
-        badge_text = "#475467"
-        success_bg = "#ECFDF3"
-        success_text = "#027A48"
 
-    return f"""
+def get_theme_css() -> str:
+    return """
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+
     <style>
-    footer {{visibility: hidden;}}
-    header {{visibility: hidden;}}
-    #MainMenu {{visibility: hidden;}}
+    /* ── Reset Streamlit chrome ── */
+    footer { visibility: hidden; }
+    header { visibility: hidden; }
+    #MainMenu { visibility: hidden; }
 
-    .stApp {{
-        background: {bg};
-    }}
+    /* ── CSS Variables ── */
+    :root {
+        --white: #ffffff;
+        --off-white: #F8F9FA;
+        --surface: #F1F3F4;
+        --border: #E0E3E8;
+        --border-light: #ECEEF1;
+        --text-primary: #202124;
+        --text-secondary: #5F6368;
+        --text-tertiary: #9AA0A6;
+        --accent: #1A73E8;
+        --accent-hover: #1557B0;
+        --accent-soft: #E8F0FE;
+        --green: #137333;
+        --green-soft: #E6F4EA;
+        --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+        --shadow-md: 0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+        --shadow-lg: 0 8px 32px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 20px;
+        --radius-pill: 999px;
+    }
 
-    [data-testid="stAppViewContainer"] {{
-        background: {bg};
-    }}
+    html, body, [data-testid="stAppViewContainer"], .stApp {
+        font-family: 'DM Sans', sans-serif !important;
+        background: var(--off-white) !important;
+        color: var(--text-primary) !important;
+        -webkit-font-smoothing: antialiased;
+    }
 
-    .block-container {{
-        max-width: 100% !important;
-        padding-top: 0 !important;
-        padding-bottom: 3rem !important;
+    .block-container {
+        max-width: 1100px !important;
+        padding-top: 2rem !important;
+        padding-bottom: 4rem !important;
         padding-left: 2rem !important;
         padding-right: 2rem !important;
-    }}
+    }
 
-    .greeting-screen {{
+    /* ── Greeting screen ── */
+    .greeting-screen {
         min-height: 100vh;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: {greeting_bg};
-    }}
+        background: var(--white);
+    }
 
-    .greeting-text {{
-        font-size: 112px;
-        font-weight: 800;
+    .greeting-text {
+        font-family: 'DM Serif Display', serif;
+        font-size: clamp(56px, 10vw, 112px);
+        font-weight: 400;
         line-height: 1;
-        color: {title};
+        color: var(--text-primary);
         text-align: center;
         animation: fadeInOut 4s ease-in-out forwards;
         padding: 0 30px;
         letter-spacing: -0.03em;
-    }}
+    }
 
-    @keyframes fadeInOut {{
-        0%   {{ opacity: 0; transform: scale(0.96); }}
-        20%  {{ opacity: 1; transform: scale(1); }}
-        80%  {{ opacity: 1; transform: scale(1); }}
-        100% {{ opacity: 0; transform: scale(1.02); }}
-    }}
+    @keyframes fadeInOut {
+        0%   { opacity: 0; transform: scale(0.96); }
+        20%  { opacity: 1; transform: scale(1); }
+        80%  { opacity: 1; transform: scale(1); }
+        100% { opacity: 0; transform: scale(1.02); }
+    }
 
-    .hero-title {{
-        margin-top: 12px;
-        font-size: 16px;
-        font-weight: 800;
+    /* ── Hero ── */
+    .hero-eyebrow {
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        color: {subtitle};
+        color: var(--accent);
         text-align: center;
-    }}
-
-    .hero-subtitle {{
-        margin-top: 10px;
-        margin-bottom: 30px;
-        font-size: 18px;
-        line-height: 1.5;
-        color: {subtitle};
-        text-align: center;
-    }}
-
-    .search-heading {{
-        font-size: 34px;
-        font-weight: 800;
-        line-height: 1.1;
-        letter-spacing: -0.03em;
-        color: {title};
-        text-align: center;
-        margin-bottom: 8px;
-    }}
-
-    .search-description {{
-        font-size: 16px;
-        line-height: 1.5;
-        color: {subtitle};
-        text-align: center;
-        margin-bottom: 20px;
-    }}
-
-    .results-header {{
-        font-size: 32px;
-        font-weight: 800;
-        line-height: 1.1;
-        letter-spacing: -0.03em;
-        color: {title};
-        text-align: center;
-        margin-bottom: 14px;
-    }}
-
-    .sub-header {{
-        font-size: 14px;
-        color: {subtitle};
-        text-align: center;
-        margin-bottom: 22px;
-    }}
-
-    .country-section {{
-        margin-top: 26px;
         margin-bottom: 10px;
-        padding: 12px 16px;
-        border: 1px solid {section_line};
-        border-radius: 14px;
-        background: {section_header_bg};
-        color: {title};
+    }
+
+    .hero-title {
+        font-family: 'DM Serif Display', serif;
+        font-size: clamp(36px, 5vw, 52px);
+        font-weight: 400;
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+        color: var(--text-primary);
+        text-align: center;
+        margin-bottom: 12px;
+    }
+
+    .hero-title em {
+        font-style: italic;
+        color: var(--accent);
+    }
+
+    .hero-subtitle {
+        font-size: 16px;
+        line-height: 1.6;
+        color: var(--text-secondary);
+        text-align: center;
+        margin-bottom: 32px;
+        font-weight: 400;
+    }
+
+    /* ── Search panel ── */
+    .search-panel {
+        background: var(--white);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 28px;
+        box-shadow: var(--shadow-md);
+        margin-bottom: 8px;
+    }
+
+    .search-panel-label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+        margin-bottom: 20px;
+    }
+
+    .controls-note {
+        font-size: 12px;
+        color: var(--text-tertiary);
+        text-align: center;
+        margin-top: 12px;
+        margin-bottom: 4px;
+    }
+
+    /* ── Streamlit widget overrides ── */
+    div[data-testid="stSelectbox"] label,
+    div[data-testid="stDateInput"] label,
+    div[data-testid="stToggle"] label,
+    div[data-testid="stMultiSelect"] label,
+    div[data-testid="stNumberInput"] label {
+        font-family: 'DM Sans', sans-serif !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.06em !important;
+        text-transform: uppercase !important;
+        color: var(--text-tertiary) !important;
+    }
+
+    div[data-baseweb="select"] > div {
+        background-color: var(--white) !important;
+        border-color: var(--border) !important;
+        border-radius: var(--radius-md) !important;
+        font-family: 'DM Sans', sans-serif !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        color: var(--text-primary) !important;
+        min-height: 44px !important;
+    }
+
+    div[data-baseweb="select"] > div:focus-within {
+        border-color: var(--accent) !important;
+        box-shadow: 0 0 0 3px rgba(26,115,232,0.12) !important;
+    }
+
+    div[data-testid="stDateInput"] input,
+    div[data-testid="stNumberInput"] input {
+        background-color: var(--white) !important;
+        border-color: var(--border) !important;
+        border-radius: var(--radius-md) !important;
+        font-family: 'DM Sans', sans-serif !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        color: var(--text-primary) !important;
+        min-height: 44px !important;
+    }
+
+    /* Multi-select tags */
+    div[data-baseweb="tag"] {
+        background-color: var(--accent-soft) !important;
+        border-radius: var(--radius-pill) !important;
+    }
+
+    div[data-baseweb="tag"] span {
+        color: var(--accent) !important;
+        font-weight: 600 !important;
+        font-size: 12px !important;
+    }
+
+    /* Expander */
+    div[data-testid="stExpander"] {
+        border: 1px solid var(--border) !important;
+        border-radius: var(--radius-md) !important;
+        background: var(--white) !important;
+        box-shadow: none !important;
+    }
+
+    div[data-testid="stExpander"] summary {
+        font-family: 'DM Sans', sans-serif !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        color: var(--text-secondary) !important;
+    }
+
+    /* Search / Download buttons */
+    div[data-testid="stButton"] button,
+    div[data-testid="stDownloadButton"] button {
+        font-family: 'DM Sans', sans-serif !important;
+        border-radius: var(--radius-pill) !important;
+        padding: 0 24px !important;
+        height: 44px !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
+        background: var(--accent) !important;
+        color: #ffffff !important;
+        border: none !important;
+        box-shadow: none !important;
+        transition: background 0.15s, box-shadow 0.15s !important;
+    }
+
+    div[data-testid="stButton"] button:hover,
+    div[data-testid="stDownloadButton"] button:hover {
+        background: var(--accent-hover) !important;
+        box-shadow: 0 2px 8px rgba(26,115,232,0.3) !important;
+    }
+
+    div[data-testid="stButton"] button:disabled {
+        background: var(--border) !important;
+        color: var(--text-tertiary) !important;
+    }
+
+    /* Toggle */
+    div[data-testid="stToggle"] > label > div[role="switch"] {
+        background-color: var(--border) !important;
+    }
+
+    div[data-testid="stToggle"] > label > div[aria-checked="true"] {
+        background-color: var(--accent) !important;
+    }
+
+    /* Spinner */
+    div[data-testid="stSpinner"] p {
+        font-family: 'DM Sans', sans-serif !important;
+        color: var(--text-secondary) !important;
+    }
+
+    /* Alerts */
+    div[data-testid="stAlert"] {
+        border-radius: var(--radius-md) !important;
+        font-family: 'DM Sans', sans-serif !important;
+    }
+
+    /* ── Results header ── */
+    .results-header {
+        font-family: 'DM Serif Display', serif;
+        font-size: 28px;
+        font-weight: 400;
+        letter-spacing: -0.02em;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+    }
+
+    .sub-header {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-bottom: 20px;
+        font-weight: 500;
+    }
+
+    /* ── Summary bar ── */
+    .summary-bar {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: var(--radius-pill);
+        background: var(--green-soft);
+        color: var(--green);
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 28px;
+    }
+
+    /* ── Country section header ── */
+    .country-section {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 32px;
+        margin-bottom: 14px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .country-flag {
         font-size: 20px;
-        font-weight: 800;
-    }}
+        line-height: 1;
+    }
 
-    .card-grid {{
+    .country-name {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text-primary);
+        letter-spacing: -0.01em;
+    }
+
+    .country-count {
+        font-size: 12px;
+        color: var(--text-tertiary);
+        font-weight: 500;
+    }
+
+    .country-cheapest {
+        margin-left: auto;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--green);
+        background: var(--green-soft);
+        padding: 3px 10px;
+        border-radius: var(--radius-pill);
+    }
+
+    /* ── Card grid ── */
+    .card-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 18px;
-    }}
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 14px;
+        margin-bottom: 8px;
+    }
 
-    .destination-card {{
-        background: {card_bg};
-        border: 1px solid {card_border};
-        border-radius: 22px;
-        padding: 20px 20px 18px 20px;
-        box-shadow: {shadow};
+    /* ── Destination card ── */
+    .dest-card {
+        background: var(--white);
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-lg);
+        padding: 20px;
         display: flex;
         flex-direction: column;
-        min-height: 260px;
-    }}
+        position: relative;
+        overflow: hidden;
+        transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+    }
 
-    .destination-top {{
+    .dest-card:hover {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-2px);
+        border-color: var(--accent);
+    }
+
+    .card-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 3px;
+    }
+
+    .card-city {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--text-primary);
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+    }
+
+    .card-code {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        color: var(--accent);
+        background: var(--accent-soft);
+        padding: 3px 8px;
+        border-radius: var(--radius-pill);
+        margin-top: 3px;
+        white-space: nowrap;
+    }
+
+    .card-country {
+        font-size: 12px;
+        color: var(--text-tertiary);
+        font-weight: 500;
+        margin-bottom: 14px;
+    }
+
+    .card-divider {
+        height: 1px;
+        background: var(--border-light);
+        margin-bottom: 14px;
+    }
+
+    .card-badges {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+    }
+
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 24px;
+        padding: 0 8px;
+        border-radius: var(--radius-pill);
+        background: var(--surface);
+        color: var(--text-secondary);
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .badge-direct {
+        background: var(--green-soft);
+        color: var(--green);
+    }
+
+    .times-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 12px;
+    }
+
+    .times-line {
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .times-line::after {
+        content: '✈';
+        font-size: 10px;
+        color: var(--text-tertiary);
+        background: var(--white);
+        padding: 0 4px;
+    }
+
+    .card-meta {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+        display: flex;
+        gap: 4px;
+    }
+
+    .card-meta-label {
+        color: var(--text-tertiary);
+        font-weight: 500;
+        min-width: 50px;
+    }
+
+    .card-meta-value {
+        font-weight: 500;
+    }
+
+    .card-footer {
+        margin-top: auto;
+        padding-top: 14px;
+        border-top: 1px solid var(--border-light);
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 10px;
-    }}
-
-    .destination-city {{
-        font-size: 24px;
-        font-weight: 800;
-        line-height: 1.15;
-        letter-spacing: -0.02em;
-        color: {title};
-        margin: 0;
-    }}
-
-    .destination-code {{
-        display: inline-block;
-        font-size: 13px;
-        font-weight: 800;
-        color: {pill_text};
-        background: {pill_bg};
-        border-radius: 999px;
-        padding: 5px 10px;
-        letter-spacing: 0.04em;
-        white-space: nowrap;
-    }}
-
-    .destination-country {{
-        font-size: 15px;
-        font-weight: 600;
-        line-height: 1.4;
-        color: {muted};
-        margin-bottom: 10px;
-    }}
-
-    .badge-row {{
-        display: flex;
-        flex-wrap: wrap;
         gap: 8px;
-        margin-bottom: 12px;
-    }}
+    }
 
-    .meta-badge {{
-        background: {badge_bg};
-        color: {badge_text};
-        border-radius: 999px;
-        padding: 6px 10px;
-        font-size: 12px;
-        font-weight: 700;
-    }}
+    .card-price {
+        font-family: 'DM Serif Display', serif;
+        font-size: 26px;
+        letter-spacing: -0.02em;
+        color: var(--text-primary);
+        line-height: 1;
+    }
 
-    .destination-meta {{
+    .card-price-label {
+        font-size: 11px;
+        color: var(--text-tertiary);
+        font-weight: 500;
+        margin-top: 2px;
+    }
+
+    .card-price-unavailable {
         font-size: 14px;
-        line-height: 1.5;
-        color: {muted};
-        margin-bottom: 6px;
-    }}
-
-    .destination-fare {{
-        margin-top: auto;
-        padding-top: 14px;
-        font-size: 18px;
-        font-weight: 800;
-        color: {fare};
-    }}
-
-    .destination-fare.muted {{
-        color: {muted};
-    }}
-
-    .card-actions {{
-        margin-top: 14px;
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-    }}
+        color: var(--text-tertiary);
+        font-weight: 500;
+    }
 
     .book-btn,
     .book-btn:link,
     .book-btn:visited,
     .book-btn:hover,
-    .book-btn:active {{
+    .book-btn:active {
         display: inline-flex;
         align-items: center;
-        justify-content: center;
-        width: 100%;
+        gap: 5px;
+        height: 36px;
+        padding: 0 16px;
+        border-radius: var(--radius-pill);
+        background: var(--accent);
+        color: #ffffff !important;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 12px;
+        font-weight: 600;
         text-decoration: none !important;
-        background: {book_btn_bg};
-        color: {book_btn_text} !important;
-        padding: 10px 16px;
-        border-radius: 12px;
-        font-size: 13px;
-        font-weight: 800;
-        line-height: 1;
-        min-height: 42px;
-        border: 1px solid {book_btn_bg};
-        box-sizing: border-box;
-    }}
-
-    .book-btn:hover {{
-        filter: brightness(1.08);
-    }}
-
-    .book-btn:focus {{
-        outline: none;
-        box-shadow: 0 0 0 3px rgba(31, 95, 174, 0.18);
-    }}
-
-    .controls-note {{
-        font-size: 13px;
-        color: {subtitle};
-        text-align: center;
-        margin-top: 8px;
-    }}
-
-    .summary-bar {{
-        margin-top: 16px;
-        margin-bottom: 12px;
-        padding: 12px 14px;
-        border-radius: 14px;
-        background: {success_bg};
-        color: {success_text};
-        font-size: 14px;
-        font-weight: 700;
-    }}
-
-    div[data-testid="stSelectbox"] label,
-    div[data-testid="stDateInput"] label,
-    div[data-testid="stToggle"] label,
-    div[data-testid="stMultiSelect"] label,
-    div[data-testid="stNumberInput"] label {{
-        font-weight: 700;
-        color: {title} !important;
-    }}
-
-    div[data-baseweb="select"] > div,
-    div[data-baseweb="tag"] {{
-        background-color: {input_bg} !important;
-        color: {input_text} !important;
-        border-color: {input_border} !important;
-    }}
-
-    div[data-testid="stDateInput"] input,
-    div[data-testid="stNumberInput"] input {{
-        background-color: {input_bg} !important;
-        color: {input_text} !important;
-    }}
-
-    div[data-testid="stButton"] button,
-    div[data-testid="stDownloadButton"] button {{
-        border-radius: 14px;
-        padding: 0.72rem 1.7rem;
-        font-weight: 700;
-        font-size: 15px;
-        background: {button_bg};
-        color: {button_text};
         border: none;
-    }}
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background 0.15s, box-shadow 0.15s;
+    }
 
-    div[data-testid="stButton"] button:hover,
-    div[data-testid="stDownloadButton"] button:hover {{
-        filter: brightness(1.05);
-    }}
+    .book-btn:hover {
+        background: var(--accent-hover) !important;
+        box-shadow: 0 2px 8px rgba(26,115,232,0.25);
+    }
 
-    @media (max-width: 900px) {{
-        .greeting-text {{
-            font-size: 64px;
-            padding: 0 20px;
-        }}
-
-        .search-heading,
-        .results-header {{
-            font-size: 28px;
-        }}
-
-        .hero-subtitle {{
-            font-size: 16px;
-        }}
-
-        .block-container {{
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+        .block-container {
             padding-left: 1rem !important;
             padding-right: 1rem !important;
-        }}
-    }}
+        }
+
+        .greeting-text {
+            font-size: 52px;
+            padding: 0 16px;
+        }
+
+        .hero-title {
+            font-size: 32px;
+        }
+
+        .card-grid {
+            grid-template-columns: 1fr;
+        }
+    }
     </style>
     """
 
@@ -573,7 +788,7 @@ def get_greeting(now: datetime) -> str:
         ((0, 6), "Κυριακή ξημερώματα... όλα καλά;"),
         ((6, 8), "Κυριακή και ξύπνησες από τώρα;"),
         ((8, 12), "Καλημέρα... όσο καλή μπορεί να είναι..."),
-        ((12, 16), "Κυριακή μεσημέρι, αύριο πάλι απ’ την αρχή"),
+        ((12, 16), "Κυριακή μεσημέρι, αύριο πάλι απ' την αρχή"),
         ((16, 17), "Σιγά σιγά τελειώνει το παραμύθι..."),
         ((17, 20), "Κυριακή απόγευμα και ακόμα εδώ???"),
         ((20, 24), "Αύριο δουλειά. Τα κεφάλια μέσα."),
@@ -674,8 +889,8 @@ def format_price(value) -> str:
     if amount is None:
         return "Fare unavailable"
     if amount.is_integer():
-        return f"From €{int(amount)}"
-    return f"From €{amount:,.0f}"
+        return f"€{int(amount)}"
+    return f"€{amount:,.0f}"
 
 
 def format_duration(minutes) -> str:
@@ -895,7 +1110,18 @@ def render_cards(results: list[dict]) -> None:
     grouped = group_by_country(results)
 
     for country, items in grouped.items():
-        st.markdown(f'<div class="country-section">{country}</div>', unsafe_allow_html=True)
+        flag = COUNTRY_FLAGS.get(country, "🌍")
+        cheapest = min(r["price"] for r in items)
+
+        st.markdown(
+            f'<div class="country-section">'
+            f'  <span class="country-flag">{flag}</span>'
+            f'  <span class="country-name">{country}</span>'
+            f'  <span class="country-count">{len(items)} {"city" if len(items) == 1 else "cities"}</span>'
+            f'  <span class="country-cheapest">From {format_price(cheapest)}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
         cards_html = []
         for item in items:
@@ -910,25 +1136,58 @@ def render_cards(results: list[dict]) -> None:
             arrival_time = item.get("arrival_time", "—")
             booking_url = item.get("booking_url", "#")
 
-            stop_text = "Direct" if stops == 0 else f"{stops} stop" if stops == 1 else f"{stops} stops"
-            code_html = f'<div class="destination-code">{airport_code}</div>' if airport_code else ""
+            # Stops badge
+            if stops == 0:
+                stop_badge = '<span class="badge badge-direct">✈ Direct</span>'
+            elif stops == 1:
+                stop_badge = '<span class="badge">1 stop</span>'
+            else:
+                stop_badge = f'<span class="badge">{stops} stops</span>'
+
+            # Duration badge
+            dur_badge = f'<span class="badge">⏱ {format_duration(duration_mins)}</span>'
+
+            # Price display
+            price_html = (
+                f'<div class="card-price">{format_price(price)}</div>'
+                f'<div class="card-price-label">one way</div>'
+                if price is not None
+                else '<div class="card-price-unavailable">Fare unavailable</div>'
+            )
+
+            # Layover row (only if not direct)
+            layover_row = (
+                f'<div class="card-meta">'
+                f'  <span class="card-meta-label">Layover</span>'
+                f'  <span class="card-meta-value">{layover_text}</span>'
+                f'</div>'
+                if stops > 0 else ""
+            )
 
             card_html = (
-                f'<div class="destination-card">'
-                f'  <div class="destination-top">'
-                f'    <div class="destination-city">{city}</div>'
-                f'    {code_html}'
+                f'<div class="dest-card">'
+                f'  <div class="card-top">'
+                f'    <div class="card-city">{city}</div>'
+                f'    <div class="card-code">{airport_code}</div>'
                 f'  </div>'
-                f'  <div class="badge-row">'
-                f'    <div class="meta-badge">{stop_text}</div>'
-                f'    <div class="meta-badge">{format_duration(duration_mins)}</div>'
+                f'  <div class="card-country">{country}</div>'
+                f'  <div class="card-divider"></div>'
+                f'  <div class="card-badges">{stop_badge}{dur_badge}</div>'
+                f'  <div class="times-row">'
+                f'    <span>{departure_time}</span>'
+                f'    <div class="times-line"></div>'
+                f'    <span>{arrival_time}</span>'
                 f'  </div>'
-                f'  <div class="destination-meta"><strong>Airline:</strong> {airlines}</div>'
-                f'  <div class="destination-meta"><strong>Times:</strong> {departure_time} → {arrival_time}</div>'
-                f'  <div class="destination-meta"><strong>Layover:</strong> {layover_text}</div>'
-                f'  <div class="destination-fare">{format_price(price)}</div>'
-                f'  <div class="card-actions">'
-                f'    <a class="book-btn" href="{booking_url}" target="_blank">Search fares</a>'
+                f'  <div class="card-meta">'
+                f'    <span class="card-meta-label">Airline</span>'
+                f'    <span class="card-meta-value">{airlines}</span>'
+                f'  </div>'
+                f'  {layover_row}'
+                f'  <div class="card-footer">'
+                f'    <div>{price_html}</div>'
+                f'    <a class="book-btn" href="{booking_url}" target="_blank">'
+                f'      View fares ›'
+                f'    </a>'
                 f'  </div>'
                 f'</div>'
             )
@@ -937,17 +1196,17 @@ def render_cards(results: list[dict]) -> None:
         st.markdown('<div class="card-grid">' + "".join(cards_html) + '</div>', unsafe_allow_html=True)
 
 
+# ── App entry point ──────────────────────────────────────────────────────────
+
 if "intro_shown" not in st.session_state:
     st.session_state.intro_shown = False
 
 now = datetime.now(ZoneInfo(TIMEZONE))
 
-top_left, top_right = st.columns([6, 1.2])
-with top_right:
-    dark_mode = st.toggle("Dark mode", value=False, key="dark_mode_toggle")
+# Inject fonts + CSS (no dark mode toggle — clean light theme)
+st.markdown(get_theme_css(), unsafe_allow_html=True)
 
-st.markdown(get_theme_css(dark_mode), unsafe_allow_html=True)
-
+# Greeting screen
 if not st.session_state.intro_shown:
     st.markdown(
         f"""
@@ -963,27 +1222,29 @@ if not st.session_state.intro_shown:
 
 all_departure_airports = load_departure_airports()
 
-_, hero_col, _ = st.columns([1.2, 2, 1.2])
+# ── Hero ─────────────────────────────────────────────────────────────────────
+_, hero_col, _ = st.columns([1, 2, 1])
 with hero_col:
-    st.markdown('<div class="hero-title">Flight Explorer</div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero-eyebrow">North America → Europe</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="hero-subtitle">Choose a departure airport in the USA or Canada and explore Europe + Istanbul with filters, export, and quick handoff links.</div>',
+        '<h1 class="hero-title">Explore <em>Europe</em><br>from anywhere</h1>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<p class="hero-subtitle">Choose a departure airport in the USA or Canada and explore Europe + Istanbul with filters, export, and quick handoff links.</p>',
         unsafe_allow_html=True,
     )
 
-_, search_col, _ = st.columns([0.9, 2.4, 0.9])
+# ── Search panel ─────────────────────────────────────────────────────────────
+_, search_col, _ = st.columns([0.15, 2, 0.15])
 
 with search_col:
-    st.markdown('<div class="search-heading">✈️ Find destinations</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="search-description">Select a departure country, airport, and date. Then refine by stops, price, countries, and sorting.</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div class="search-panel">', unsafe_allow_html=True)
 
     row1_col1, row1_col2, row1_col3 = st.columns(3)
     with row1_col1:
         departure_country = st.selectbox(
-            "Departure Country",
+            "Country",
             ["United States", "Canada"],
             index=0,
         )
@@ -1013,7 +1274,7 @@ with search_col:
             min_value=(now + timedelta(days=1)).date(),
         )
 
-    with st.expander("Advanced filters", expanded=True):
+    with st.expander("Advanced filters", expanded=False):
         f1, f2, f3 = st.columns(3)
         with f1:
             search_scope = st.selectbox(
@@ -1057,14 +1318,17 @@ with search_col:
             )
 
     st.markdown(
-        '<div class="controls-note">Popular departure airports appear first. Results are grouped by destination country and city, and may include connecting flights depending on the stops filter.</div>',
+        '<p class="controls-note">Popular departure airports appear first. Results are grouped by destination country and city, and may include connecting flights depending on the stops filter.</p>',
         unsafe_allow_html=True,
     )
 
-    btn_left, btn_mid, btn_right = st.columns([1.2, 1, 1.2])
+    btn_left, btn_mid, btn_right = st.columns([1.5, 1, 1.5])
     with btn_mid:
-        search = st.button("Search", use_container_width=True, disabled=origin is None)
+        search = st.button("Search flights", use_container_width=True, disabled=origin is None)
 
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ── Results ──────────────────────────────────────────────────────────────────
 if search:
     if not API_KEY:
         st.error("Missing SERPAPI_KEY in Streamlit secrets.")
@@ -1078,7 +1342,6 @@ if search:
         if not destination_pool:
             st.warning("No destination airports match the current filters.")
         else:
-            # Performance: smaller pool -> more workers; larger pool -> moderate workers.
             max_workers = 10 if search_scope == "Major airports only" else 8
             price_limit = max_price if max_price_enabled else None
 
@@ -1098,22 +1361,22 @@ if search:
                 unsafe_allow_html=True,
             )
             st.markdown(
-                f'<div class="sub-header">{outbound_date.isoformat()} • {search_scope} • {stop_label}</div>',
+                f'<div class="sub-header">{outbound_date.isoformat()} &nbsp;·&nbsp; {search_scope} &nbsp;·&nbsp; {stop_label}</div>',
                 unsafe_allow_html=True,
             )
 
             if results:
                 cheapest = min(r["price"] for r in results)
                 st.markdown(
-                    f'<div class="summary-bar">{len(results)} cities found • Cheapest option {format_price(cheapest)}</div>',
+                    f'<div class="summary-bar">✓ &nbsp;{len(results)} cities found &nbsp;·&nbsp; Cheapest from {format_price(cheapest)}</div>',
                     unsafe_allow_html=True,
                 )
 
                 export_bytes = results_to_excel(results, origin, outbound_date.isoformat())
-                dl_left, dl_mid, dl_right = st.columns([1.4, 1, 1.4])
+                dl_left, dl_mid, dl_right = st.columns([1.5, 1, 1.5])
                 with dl_mid:
                     st.download_button(
-                        "Download to Excel",
+                        "⬇ Download Excel",
                         data=export_bytes,
                         file_name=f"flight_explorer_{origin}_{outbound_date.isoformat()}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
