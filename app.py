@@ -875,13 +875,8 @@ def get_airport_options_for_country(all_airports: list[dict], selected_country: 
     return popular + others
 
 
-def get_destination_pool(scope: str, allowed_countries: list[str]) -> list[dict]:
-    destinations = [d for d in EUROPE_DESTINATIONS if d["country"] in allowed_countries]
-
-    if scope == "Major airports only":
-        destinations = [d for d in destinations if d["airport_code"] in MAJOR_DEST_CODES]
-
-    return destinations
+# Europe kgmid used by Google Travel Explore to scope results to Europe
+EUROPE_KGMID = "/m/02j9z"
 
 
 def safe_float(value):
@@ -915,110 +910,9 @@ def format_duration(minutes) -> str:
     return f"{hours}h {remainder}m"
 
 
-def extract_layover_text(layovers) -> str:
-    if not layovers:
-        return "Direct"
-
-    parts = []
-    for layover in layovers:
-        if not isinstance(layover, dict):
-            continue
-        name = layover.get("name") or layover.get("airport_name") or layover.get("id") or layover.get("code")
-        duration = layover.get("duration")
-        duration_text = ""
-        if duration not in (None, ""):
-            duration_text = f" ({format_duration(duration)})"
-        if name:
-            parts.append(f"{name}{duration_text}")
-
-    return ", ".join(parts) if parts else "Connection"
-
-
 def build_search_url(origin: str, destination_code: str, outbound_date: str) -> str:
     query = quote_plus(f"Google Flights {origin} to {destination_code} {outbound_date}")
     return f"https://www.google.com/search?q={query}"
-
-
-def parse_flight_result(data: dict, fallback: dict, origin: str, outbound_date: str) -> dict | None:
-    itineraries = []
-    itineraries.extend(data.get("best_flights", []))
-    itineraries.extend(data.get("other_flights", []))
-
-    valid = []
-    for itinerary in itineraries:
-        price = safe_float(itinerary.get("price"))
-        if price is None:
-            continue
-
-        layovers = itinerary.get("layovers", []) or []
-        flights = itinerary.get("flights", []) or []
-
-        airline_names = []
-        departure_time = None
-        arrival_time = None
-
-        for idx, flight in enumerate(flights):
-            airline = flight.get("airline")
-            if airline and airline not in airline_names:
-                airline_names.append(airline)
-
-            if idx == 0:
-                departure_time = flight.get("departure_airport", {}).get("time") or flight.get("departure_time")
-            if idx == len(flights) - 1:
-                arrival_time = flight.get("arrival_airport", {}).get("time") or flight.get("arrival_time")
-
-        valid.append(
-            {
-                "city": fallback["city"],
-                "country": fallback["country"],
-                "airport_code": fallback["airport_code"],
-                "price": price,
-                "stops": len(layovers),
-                "airlines": ", ".join(airline_names[:2]) if airline_names else "—",
-                "duration_mins": itinerary.get("total_duration"),
-                "layover_text": extract_layover_text(layovers),
-                "departure_time": departure_time or "—",
-                "arrival_time": arrival_time or "—",
-                "booking_url": build_search_url(origin, fallback["airport_code"], outbound_date),
-            }
-        )
-
-    if not valid:
-        return None
-
-    valid.sort(key=lambda x: (x["price"], x["stops"], safe_float(x["duration_mins"]) or 999999))
-    return valid[0]
-
-
-@st.cache_data(ttl=21600, show_spinner=False)
-def search_destination(origin: str, destination: dict, outbound_date: str, stops_param: int) -> dict | None:
-    if not API_KEY:
-        return None
-
-    if origin == destination["airport_code"]:
-        return None
-
-    params = {
-        "engine": "google_flights",
-        "departure_id": origin,
-        "arrival_id": destination["airport_code"],
-        "outbound_date": outbound_date,
-        "type": 2,
-        "stops": stops_param,
-        "sort_by": 2,
-        "hl": "en",
-        "gl": "gr",
-        "currency": "EUR",
-        "api_key": API_KEY,
-    }
-
-    try:
-        response = requests.get(SERPAPI_URL, params=params, timeout=30)
-        response.raise_for_status()
-        data = response.json()
-        return parse_flight_result(data, destination, origin, outbound_date)
-    except Exception:
-        return None
 
 
 def sort_results(results: list[dict], sort_by: str) -> list[dict]:
@@ -1031,47 +925,91 @@ def sort_results(results: list[dict], sort_by: str) -> list[dict]:
     return sorted(results, key=lambda x: (x["price"], x["stops"], safe_float(x["duration_mins"]) or 999999))
 
 
-def filter_results(results: list[dict], max_price):
+def filter_results(results: list[dict], max_price) -> list[dict]:
     if max_price is None:
         return results
     return [r for r in results if r["price"] <= max_price]
 
 
+@st.cache_data(ttl=21600, show_spinner=False)
 def get_destinations(
     origin: str,
     outbound_date: str,
-    destination_pool: list[dict],
     stops_param: int,
     max_price,
     sort_by: str,
-    max_workers: int,
+    selected_countries: tuple,
 ) -> list[dict]:
+    """Single API call using Google Travel Explore — returns all European
+    destinations from the given origin in one request."""
+    if not API_KEY:
+        return []
+
+    params = {
+        "engine": "google_travel_explore",
+        "departure_id": origin,
+        "arrival_id": EUROPE_KGMID,
+        "outbound_date": outbound_date,
+        "type": 2,
+        "stops": stops_param,
+        "hl": "en",
+        "gl": "gr",
+        "currency": "EUR",
+        "api_key": API_KEY,
+    }
+
+    try:
+        response = requests.get(SERPAPI_URL, params=params, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+    except Exception:
+        return []
+
     results = []
+    for dest in data.get("destinations", []):
+        country = dest.get("country", "")
+        if selected_countries and country not in selected_countries:
+            continue
 
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [
-            executor.submit(search_destination, origin, destination, outbound_date, stops_param)
-            for destination in destination_pool
-        ]
+        city = dest.get("name", "")
 
-        for future in as_completed(futures):
-            result = future.result()
-            if result:
-                results.append(result)
+        # Flight data can be nested under "flights" list or "flight" dict
+        flights_list = dest.get("flights") or []
+        flight = flights_list[0] if flights_list else (dest.get("flight") or {})
+
+        price = safe_float(flight.get("price") or dest.get("price"))
+        if price is None:
+            continue
+
+        airport_code = (
+            flight.get("arrival_airport", {}).get("id")
+            or flight.get("airport_code")
+            or dest.get("primary_airport", "")
+        )
+        stops = int(flight.get("stops") or 0)
+        airline = flight.get("airline_name") or flight.get("airline") or "—"
+        duration_mins = flight.get("flight_duration_minutes") or flight.get("duration")
+        dep_time = flight.get("departure_time") or "—"
+        arr_time = flight.get("arrival_time") or "—"
+
+        results.append({
+            "city": city,
+            "country": country,
+            "airport_code": airport_code,
+            "price": price,
+            "stops": stops,
+            "airlines": airline,
+            "duration_mins": duration_mins,
+            "layover_text": "Direct" if stops == 0 else f"{stops} stop{'s' if stops > 1 else ''}",
+            "departure_time": dep_time,
+            "arrival_time": arr_time,
+            "booking_url": build_search_url(origin, airport_code or city, outbound_date),
+        })
 
     results = filter_results(results, max_price)
+    results = sort_results(results, sort_by)
+    return results
 
-    # Group by country + city and keep cheapest airport/itinerary
-    grouped = {}
-    for item in results:
-        group_key = (item["country"].strip().lower(), item["city"].strip().lower())
-        existing = grouped.get(group_key)
-        if existing is None or item["price"] < existing["price"]:
-            grouped[group_key] = item
-
-    final_results = list(grouped.values())
-    final_results = sort_results(final_results, sort_by)
-    return final_results
 
 
 def group_by_country(results: list[dict]) -> dict[str, list[dict]]:
@@ -1282,14 +1220,7 @@ with st.container(border=True):
         )
 
     with st.expander("Advanced filters", expanded=False):
-        f1, f2, f3 = st.columns(3)
-        with f1:
-            search_scope = st.selectbox(
-                "Search Scope",
-                ["Major airports only", "Full Europe"],
-                index=0,
-                help="Major airports is faster and lighter on API usage.",
-            )
+        f2, f3 = st.columns(2)
         with f2:
             stop_label = st.selectbox(
                 "Stops",
@@ -1334,7 +1265,7 @@ with st.container(border=True):
         search = st.button("Search flights", use_container_width=True, disabled=origin is None)
 
 
-# ── Results ──────────────────────────────────────────────────────────────────
+# ── Results ──────────────────────────────────────────────────────────────────────────
 if search:
     if not API_KEY:
         st.error("Missing SERPAPI_KEY in Streamlit secrets.")
@@ -1343,52 +1274,45 @@ if search:
     elif not selected_destination_countries:
         st.error("Please select at least one destination country.")
     else:
-        destination_pool = get_destination_pool(search_scope, selected_destination_countries)
+        price_limit = max_price if max_price_enabled else None
 
-        if not destination_pool:
-            st.warning("No destination airports match the current filters.")
+        with st.spinner("Searching destinations... (1 API call)"):
+            results = get_destinations(
+                origin=origin,
+                outbound_date=outbound_date.isoformat(),
+                stops_param=stops_param,
+                max_price=price_limit,
+                sort_by=sort_by,
+                selected_countries=tuple(sorted(selected_destination_countries)),
+            )
+
+        st.markdown(
+            f'<div class="results-header">Destinations from {origin}</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f'<div class="sub-header">{outbound_date.isoformat()} &nbsp;·&nbsp; {stop_label}</div>',
+            unsafe_allow_html=True,
+        )
+
+        if results:
+            cheapest = min(r["price"] for r in results)
+            st.markdown(
+                f'<div class="summary-bar">✓ &nbsp;{len(results)} cities found &nbsp;·&nbsp; Cheapest from {format_price(cheapest)}</div>',
+                unsafe_allow_html=True,
+            )
+
+            export_bytes = results_to_excel(results, origin, outbound_date.isoformat())
+            dl_left, dl_mid, dl_right = st.columns([1.5, 1, 1.5])
+            with dl_mid:
+                st.download_button(
+                    "⬇ Download Excel",
+                    data=export_bytes,
+                    file_name=f"flight_explorer_{origin}_{outbound_date.isoformat()}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                )
+
+            render_cards(results)
         else:
-            max_workers = 10 if search_scope == "Major airports only" else 8
-            price_limit = max_price if max_price_enabled else None
-
-            with st.spinner("Searching destinations..."):
-                results = get_destinations(
-                    origin=origin,
-                    outbound_date=outbound_date.isoformat(),
-                    destination_pool=destination_pool,
-                    stops_param=stops_param,
-                    max_price=price_limit,
-                    sort_by=sort_by,
-                    max_workers=max_workers,
-                )
-
-            st.markdown(
-                f'<div class="results-header">Destinations from {origin}</div>',
-                unsafe_allow_html=True,
-            )
-            st.markdown(
-                f'<div class="sub-header">{outbound_date.isoformat()} &nbsp;·&nbsp; {search_scope} &nbsp;·&nbsp; {stop_label}</div>',
-                unsafe_allow_html=True,
-            )
-
-            if results:
-                cheapest = min(r["price"] for r in results)
-                st.markdown(
-                    f'<div class="summary-bar">✓ &nbsp;{len(results)} cities found &nbsp;·&nbsp; Cheapest from {format_price(cheapest)}</div>',
-                    unsafe_allow_html=True,
-                )
-
-                export_bytes = results_to_excel(results, origin, outbound_date.isoformat())
-                dl_left, dl_mid, dl_right = st.columns([1.5, 1, 1.5])
-                with dl_mid:
-                    st.download_button(
-                        "⬇ Download Excel",
-                        data=export_bytes,
-                        file_name=f"flight_explorer_{origin}_{outbound_date.isoformat()}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True,
-                    )
-
-                render_cards(results)
-            else:
-                st.info("No destinations found for the selected airport, date, and filters.")
+            st.info("No destinations found. The Travel Explore API may return no results for this route/date, or all were filtered out.")
